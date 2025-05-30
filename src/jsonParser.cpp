@@ -1,5 +1,6 @@
 #include "jsonParser.h"
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -109,6 +110,25 @@ void JsonFile::_check_syntax() {
                    curtype.top() == JsonTypeName::JsonString) {
             lastType = curtype.top();
             curtype.pop();
+        }
+
+        // mark the json int
+        if (std::isdigit(_jsonStr[i])) {
+            // if()
+        }
+
+        // mark the json float
+        // ...
+
+        if (std::isalpha(_jsonStr[i])) {
+            if (_jsonStr[i] == 'e' && curtype.top() == JsonTypeName::JsonInt &&
+                std::isdigit(_jsonStr[i + 1])) {
+                // do nothing
+            } else if (curtype.top() == JsonTypeName::JsonString) {
+                // do nothing
+            } else {
+                throw std::runtime_error("json string must use \"\"");
+            }
         }
 
         if (_jsonStr[i] == ':') {
