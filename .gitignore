@@ -34,7 +34,8 @@
 build/
 .vscode/
 .cache/
-test/
+makefile
+*.dSYM
 compile_commands.json
 
 plan.txt
