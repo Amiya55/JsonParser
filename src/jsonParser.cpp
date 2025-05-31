@@ -12,7 +12,9 @@
 #include "config.h"
 #include "jsonTypes.h"
 
-void JsonSyntaxCheker::_check_key(const std::string& key) {
+
+/* --- JsonSyntaxChecker --- */
+void JsonSyntaxChecker::_check_key(const std::string& key) {
     bool le = false;
     bool ri = false;
     for (int i = 0; i < key.size(); ++i) {
@@ -34,7 +36,7 @@ void JsonSyntaxCheker::_check_key(const std::string& key) {
         throw std::runtime_error("Unexpected end of string: " + key);
 }
 
-void JsonSyntaxCheker::_check_value(const std::string& value) {
+void JsonSyntaxChecker::_check_value(const std::string& value) {
     if (value.find_first_not_of(" \t\n\r") == std::string::npos)
         throw std::runtime_error("Value expected");
 
@@ -116,14 +118,14 @@ void JsonSyntaxCheker::_check_value(const std::string& value) {
         throw std::runtime_error("Unexpected end of string: " + value);
 }
 
-void JsonSyntaxCheker::syntax_check(const std::string& jsonStr,
-                                    JsonTypeName containerType) {
+void JsonSyntaxChecker::syntax_check(const std::string& jsonStr,
+                                     JsonTypeName containerType) {
     std::string value;
     std::string
-        subContainer;  // 当前字符串中存在的子容器: {}或者[]，用作递归调用参数
+        subContainer; // 当前字符串中存在的子容器: {}或者[]，用作递归调用参数
 
-    std::stack<JsonTypeName> types;  // 当前字符所在的数据结构: "", {}, []
-    std::vector<std::string> values;  // obj字符串以逗号(,)分割开的子字符串
+    std::stack<JsonTypeName> types; // 当前字符所在的数据结构: "", {}, []
+    std::vector<std::string> values; // obj字符串以逗号(,)分割开的子字符串
 
     size_t countComma = 0;
     bool inContainer = false;
@@ -139,8 +141,9 @@ void JsonSyntaxCheker::syntax_check(const std::string& jsonStr,
 
         if (jsonStr[i] == '{' || jsonStr[i] == '[') {
             if (types.empty() || types.top() != JsonTypeName::JsonString) {
-                jsonStr[i] == '{' ? types.push(JsonTypeName::JsonObject)
-                                  : types.push(JsonTypeName::JsonArray);
+                jsonStr[i] == '{'
+                    ? types.push(JsonTypeName::JsonObject)
+                    : types.push(JsonTypeName::JsonArray);
                 inContainer = true;
             }
         } else if (jsonStr[i] == '}' || jsonStr[i] == ']') {
@@ -160,7 +163,7 @@ void JsonSyntaxCheker::syntax_check(const std::string& jsonStr,
         }
 
         if (jsonStr[i] == ',' && types.empty()) {
-            ++countComma;  // 只有当types栈为空时才加加这个值，否则可能是字符串或者容器内的逗号
+            ++countComma; // 只有当types栈为空时才加加这个值，否则可能是字符串或者容器内的逗号
             if (!value.empty() &&
                 value.find_first_not_of(" \t\n\r") != std::string::npos)
                 values.push_back(value);
@@ -215,6 +218,8 @@ void JsonSyntaxCheker::syntax_check(const std::string& jsonStr,
     }
 }
 
+
+/* --- JsonFile --- */
 JsonFile::JsonFile() : _jsonData(nullptr) {}
 
 JsonFile::~JsonFile() {
@@ -224,6 +229,12 @@ JsonFile::~JsonFile() {
 }
 
 void JsonFile::open_json(const char* fileName) {
+    // if there is a already be opened, close the file and open a new one
+    if (is_open()) {
+        close_json();
+    }
+
+    // check the json file exists or not
     std::filesystem::path jsonPath(fileName);
     if (!std::filesystem::exists(jsonPath)) {
         throw std::runtime_error("json file does not exist!");
@@ -241,14 +252,36 @@ void JsonFile::open_json(const char* fileName) {
         throw std::runtime_error("the opened file is not json file!");
     }
 
+    // get file name and open the file
     _fileName = jsonPath.filename().string();
     _file.open(jsonPath.string(), std::ios::in | std::ios::out);
     if (!_file.is_open()) {
         throw std::runtime_error("error opening json file!");
     }
 
-    // load json data to string from the .json file
-    _load_data();
+    // get the json data string from json file
+    std::string buffer;
+    while (std::getline(_file, buffer)) {
+        _jsonStr += buffer;
+    }
+    // get rid of the space before the json string or behind the json string
+    size_t begin = _jsonStr.find_first_not_of(" \t\n\r");
+    _jsonStr.erase(0, begin);
+    size_t end = _jsonStr.find_last_not_of(" \t\n\r");
+    _jsonStr.erase(end + 1);
+
+    // new a JsonType object to mark json object or json array
+    if (_jsonStr.front() == '{') {
+        // check the json file syntax
+        JsonSyntaxChecker().syntax_check(_jsonStr, JsonTypeName::JsonObject);
+        _jsonData = new JsonObj;
+    } else if (_jsonStr.front() == '[') {
+        JsonSyntaxChecker().syntax_check(_jsonStr, JsonTypeName::JsonArray);
+        _jsonData = new JsonArr;
+    }
+
+    // parse json str into our json classes
+    _parse_data();
 }
 
 void JsonFile::close_json() noexcept {
@@ -261,25 +294,4 @@ bool JsonFile::is_open() noexcept {
     return _file.is_open();
 }
 
-void JsonFile::_load_data() {
-    // get the json data string
-    std::string buffer;
-    while (std::getline(_file, buffer)) {
-        _jsonStr += buffer;
-    }
-
-    size_t begin = _jsonStr.find_first_not_of(" \t\n\r");
-    _jsonStr.erase(0, begin);
-    size_t end = _jsonStr.find_last_not_of(" \t\n\r");
-    _jsonStr.erase(end + 1);
-
-    // new a JsonType object to mark json object or json array
-    if (_jsonStr.front() == '{') {
-        // check the json file syntax
-        JsonSyntaxCheker().syntax_check(_jsonStr, JsonTypeName::JsonObject);
-        _jsonData = new JsonObj;
-    } else if (_jsonStr.front() == '[') {
-        JsonSyntaxCheker().syntax_check(_jsonStr, JsonTypeName::JsonArray);
-        _jsonData = new JsonArr;
-    }
-}
+void JsonFile::_parse_data() noexcept {}

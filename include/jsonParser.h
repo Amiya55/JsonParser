@@ -5,10 +5,10 @@
 #include <string>
 #include "jsonTypes.h"
 
-class JsonSyntaxCheker {
+class JsonSyntaxChecker {
 public:
-    JsonSyntaxCheker() = default;
-    ~JsonSyntaxCheker() = default;
+    JsonSyntaxChecker() = default;
+    ~JsonSyntaxChecker() = default;
 
     void syntax_check(
         const std::string& jsonStr,
@@ -39,8 +39,8 @@ private:
     std::string _jsonStr; // the json data, raw str data from the .json file
     JsonType* _jsonData; // the json data, maybe json object or json array
 
-    void _load_data(); // may throw exception: runtime_error
-    // check the json syntax, if there is a syntax problem, throw the exception
+    // transform the json str into our json classes and get ready to operate
+    void _parse_data() noexcept;
 };
 
 #endif  // JSONPARSER_H
