@@ -1,7 +1,7 @@
-#ifndef COMMINC_H
-#define COMMINC_H
+#ifndef CONFIG_H
+#define CONFIG_H
 
-#include <stdint.h>
+#include <cstdint>
 
 // file opening mod: read, write, append
 enum class Permission : uint8_t { RD = (1 << 2), WR = (1 << 1), AP = (1 << 0) };
@@ -17,4 +17,4 @@ enum class JsonTypeName {
     JsonNull
 };
 
-#endif  // COMMINC_H
+#endif  // CONFIG_H
