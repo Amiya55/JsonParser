@@ -1,11 +1,10 @@
-#include <algorithm>
 #include <cctype>
-#include <csignal>
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <stack>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -80,7 +79,7 @@ bool check_value(const string& value) {
                     return false;
             }
         } else if ((type.top() == INT || type.top() == FLT)) {
-            if (value[i] == ' ' || i == value.size() - 1) {
+            if (value[i] == ' ') {
                 // 如果当前的类型为float和int，如果当前字符为空格，则认为value值已经结束，可以收尾了
                 type.pop();
                 if (value.substr(i + 1).find_first_not_of(" \t\n\r") !=
@@ -93,7 +92,8 @@ bool check_value(const string& value) {
                 if (countE > 1 || i == value.size() - 1 ||
                     !isdigit(value[i + 1]))
                     return false;
-            } else if (value[i] == '.' && countE == 0) {  // e的后面不能有小数点
+            } else if (value[i] == '.' && countE == 0) {
+                // e的后面不能有小数点
                 if (type.top() == INT) {
                     if (i == value.size() - 1 || !isdigit(value[i + 1])) {
                         // 如果小数点后面没有字符或者字符不是数字，直接返回false
@@ -121,92 +121,103 @@ bool check_value(const string& value) {
 }
 
 void check_syntax(string& obj, Type curType) {
-    string tmp;
-    vector<string> vec;
+    string value;
+    string
+        subContainer; // 当前字符串中存在的子容器: {}或者[]，用作递归调用参数
 
-    string subStr;
-    stack<Type> curTy;
+    stack<Type> types; // 当前字符所在的数据结构: "", {}, []
+    vector<string> values; // obj字符串以逗号(,)分割开的子字符串
 
-    size_t commaCount = 0;
-    size_t index = 1;
-    while (index < obj.size() - 1) {
-        // 遇到对象或者数组的情况
-        if ((obj[index] == '{' || obj[index] == '[')) {
-            obj[index] == '{' ? curTy.push(OBJ) : curTy.push(ARR);
-        } else if ((obj[index] == '}' || obj[index] == ']') && !curTy.empty()) {
-            Type lastType = curTy.top();
-            curTy.pop();
+    size_t countComma = 0;
+    bool inContainer = false;
 
-            if (curTy.empty()) {
-                subStr.push_back(obj[index]);
-                lastType == OBJ ? check_syntax(subStr, OBJ)
-                                : check_syntax(subStr, ARR);
-                subStr.clear();
+    for (int i = 1; i < obj.size() - 1; ++i) {
+        if (obj[i] == '\"') {
+            if (types.empty() || types.top() != STR)
+                types.push(STR);
+            else if (types.top() == STR && obj[i - 1] != '\\')
+                types.pop();
+        }
+
+        if (obj[i] == '{' || obj[i] == '[') {
+            if (types.empty() || types.top() != STR) {
+                obj[i] == '{' ? types.push(OBJ) : types.push(ARR);
+                inContainer = true;
+            }
+        } else if (obj[i] == '}' || obj[i] == ']') {
+            if (!types.empty() && types.top() != STR) {
+                const Type lastType = types.top();
+                types.pop();
+                // 当栈为空，说明我们最初遇到的容器结束了，可以递归调用，传入这个容器字符串，进一步检查
+                if (types.empty()) {
+                    subContainer.push_back(obj[i]);
+                    lastType == OBJ
+                        ? check_syntax(subContainer, OBJ)
+                        : check_syntax(subContainer, ARR);
+                    inContainer = false;
+                    subContainer.clear();
+                }
             }
         }
 
-        if (!curTy.empty()) {
-            subStr.push_back(obj[index]);
-            tmp.push_back(obj[index]);
+        if (obj[i] == ',' && types.empty()) {
+            ++countComma; // 只有当types栈为空时才加加这个值，否则可能是字符串或者容器内的逗号
+            if (!value.empty() &&
+                value.find_first_not_of(" \t\n\r") != string::npos)
+                values.push_back(value);
+            value.clear();
         } else {
-            if (obj[index] == ',') {
-                // 为了配合逗号检查，如果一个字符串全是空格，我们认为它是非法逗号引起的无效字符串，不添加进入vec
-                if (!tmp.empty() &&
-                    tmp.find_first_not_of(" \t\n\r") != string::npos)
-                    vec.push_back(tmp);
-                ++commaCount;
-                tmp.clear();
-            } else {
-                tmp.push_back(obj[index]);
-            }
+            if (inContainer)
+                subContainer.push_back(obj[i]);
+            value.push_back(obj[i]);
         }
 
-        ++index;
-        // 遇到最后一个字符，自动添加到数组，值得注意的是，如果最后一个字符串全是空格，则不添加
-        if (index == obj.size() - 1 &&
-            tmp.find_first_not_of(" \t\n\r") != string::npos)
-            vec.push_back(tmp);
+        if (i == obj.size() - 2) {
+            // 遇到json字符串结尾，push最后的数据到数组中
+            if (value.find_first_not_of(" \t\n\r") != string::npos)
+                values.push_back(value);
+
+            // 最后检查types数组是否为空，如果不为空，那么说明""，{}或者[]存在没有关闭的情况
+            if (!types.empty())
+                throw runtime_error(
+                    "Syntax Error, string or container does not closed: " +
+                    obj);
+        }
     }
 
-    // 检查逗号是否合法
-    if (!vec.empty() && commaCount >= vec.size()) {
+    if (!values.empty() && countComma >= values.size()) {
         throw runtime_error("unexpected comma: " + obj);
     }
 
     // 检查语法
-    for (int i = 0; i < vec.size(); ++i) {
+    for (int i = 0; i < values.size(); ++i) {
         if (curType == OBJ) {
-            size_t sep = vec[i].find_first_of(":");
+            size_t sep = values[i].find_first_of(":");
             if (sep == string::npos) {
-                throw runtime_error("expected value: " + vec[i]);
+                throw runtime_error("expected value: " + values[i]);
             }
 
-            if (!check_key(vec[i].substr(0, sep))) {
-                throw runtime_error("key must be string: " + vec[i]);
+            if (!check_key(values[i].substr(0, sep))) {
+                throw runtime_error("key must be string: " + values[i]);
             }
 
-            if (!check_value(vec[i].substr(sep + 1))) {
-                throw runtime_error("unexpected value: " + vec[i]);
+            if (!check_value(values[i].substr(sep + 1))) {
+                throw runtime_error("unexpected value: " + values[i]);
             }
         } else if (curType == ARR) {
-            if (!check_value(vec[i])) {
-                throw runtime_error("unexpected value: " + vec[i]);
+            if (!check_value(values[i])) {
+                throw runtime_error("unexpected value: " + values[i]);
             }
         }
     }
-
-    // cout << obj << " " << curType << endl;
-
-    // for (auto& e : vec) {
-    //     cout << e << "|";
-    // }
-    // cout << endl;
 }
 
 string load_json() {
     fstream fs;
     fs.open("data.json", ios::in);
-    // fs << "hello world" << endl;
+    if (!fs.is_open()) {
+        throw runtime_error("cannot find json file! check the path");
+    }
 
     string str;
     string tmp;
@@ -221,7 +232,7 @@ string load_json() {
 int main() {
     try {
         string json(load_json());
-        check_syntax(json, ARR);
+        check_syntax(json, OBJ);
     } catch (exception& e) {
         cout << e.what() << endl;
     }

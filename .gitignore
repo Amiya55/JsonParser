@@ -32,10 +32,11 @@
 *.app
 
 build/
+cmake-build-debug/
+
 .vscode/
+.idea/
 .cache/
-makefile
+
 *.dSYM
 compile_commands.json
-
-plan.txt
