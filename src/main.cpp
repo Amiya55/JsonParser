@@ -2,6 +2,8 @@
 #include <iostream>
 #include "iniParser.h"
 #include "jsonParser.h"
+#include "jsonTypes.h"
+#include "utilities.h"
 
 std::string load_json() {
     std::fstream fs;
@@ -22,11 +24,12 @@ std::string load_json() {
 void read_from_json() {
     try {
         // std::string jsonStr = load_json();
-        // JsonSyntaxCheker().syntax_check(jsonStr, JsonTypeName::JsonObject);
+        // trim(jsonStr);
+        // JsonSyntaxChecker().syntax_check(jsonStr, JsonValue::Type::Object);
 
         JsonFile jf;
         jf.open_json("data.json");
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
         std::cout << e.what() << std::endl;
     }
 }
