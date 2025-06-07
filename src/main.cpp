@@ -15,7 +15,7 @@ std::string load_json() {
     std::string str;
     std::string tmp;
     while (getline(fs, tmp))
-        str += tmp;
+        str += tmp + '\n';
     fs.close();
 
     return str;
@@ -27,10 +27,14 @@ void read_from_json() {
         // trim(jsonStr);
         // JsonSyntaxChecker().syntax_check(jsonStr, JsonValue::Type::Object);
 
-        JsonFile jf;
-        jf.open_json("data.json");
+        // JsonFile jf;
+        // jf.open_json("data.json");
+
+        std::string json("     null    , \n  null,  ggsh, null false");
+        simpleJson::Lexer le(json);
+        le.peekToken();
     } catch (std::exception &e) {
-        std::cout << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
     }
 }
 
