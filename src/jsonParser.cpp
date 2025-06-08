@@ -15,21 +15,36 @@
 namespace simpleJson {
 #if __cplusplus >= 201703L
 
+    /* Token */
+    Token::Token(TokenType type, const std::string &value,
+              size_t line, size_t column)
+        : _type(type)
+        , _value(value)
+        , _line(line)
+        , _column(column) {}
+
+    TokenType Token::type() const {
+        return _type;
+    }
+
+
+    /* Lexer */
     Lexer::Lexer(const std::string &input) {
         if (input.empty()) {
             throw std::invalid_argument("Lexer: empty input");
         }
 
-        size_t chLine = 0;
-        for (const auto &ch: input) {
-            if (ch == '\n') {
-                ++chLine;
-                _input.emplace_back("");
-            } else {
-                if (_input.empty())
-                    _input.emplace_back("");
-                _input[chLine].push_back(ch);
+        size_t begin = 0;
+        size_t end = 0;
+        while (begin < input.size()) {
+            end = input.find_first_of('\n', begin);
+            if (end == std::string::npos) {
+                _input.emplace_back(input.substr(begin));
+                break;
             }
+
+            _input.emplace_back(input.substr(begin, end - begin));
+            begin = end + 1;
         }
     }
 
@@ -37,6 +52,9 @@ namespace simpleJson {
         for (; _line < _input.size(); ++_line, _column = 0) {
             for (; _column < _input[_line].size(); ++_column) {
                 _skipWhitespace();
+                if (_line >= _input.size()) // 判断读取到的是否为末尾的空白字符
+                    break;
+
                 switch (_input[_line][_column]) {
                     case '{':
                         _tokens.emplace_back(
@@ -83,16 +101,16 @@ namespace simpleJson {
                         } else if (std::isdigit(_input[_line][_column])) {
                             _tokens.emplace_back(_parseNumber());
                         } else {
-                            std::string errMsg(std::to_string(_line + 1) + " | ");
-                            errMsg += _input[_line] + "\n    ";
-                            for (size_t i = 0; i < _input[_line].size(); ++i) {
-                                if (i > _column && std::isspace(_input[_line][i]))
-                                    break;
-                                errMsg += i >= _column ? '^' : ' ';
+                            const size_t start = _column;
+                            while (_column < _input[_line].size() && _input[_line][_column] != ',' &&
+                                   _input[_line][_column] != '}' && _input[_line][_column] != ']' &&
+                                   !isspace(_input[_line][_column])) {
+                                ++_column;
                             }
-                            errMsg += "  invalid value";
 
-                            throw std::invalid_argument(errMsg);
+                            throw std::invalid_argument(_buildErrMsg(
+                                "invalid json value", _line,
+                                start, _column - 1));
                         }
                     }
                 }
@@ -100,7 +118,7 @@ namespace simpleJson {
         }
     }
 
-    std::vector<Token> &Lexer::getTokens() noexcept {
+    std::vector<Token> Lexer::getTokens() noexcept {
         return _tokens;
     }
 
@@ -108,7 +126,7 @@ namespace simpleJson {
         while (_line < _input.size() &&
                std::isspace(_input[_line][_column])) {
             ++_column;
-            if (_column == _input[_line].size()) {
+            if (_column >= _input[_line].size()) {
                 ++_line;
                 _column = 0;
             }
@@ -148,16 +166,13 @@ namespace simpleJson {
                     }
 
                     if (count < 4 || isValid == false) {
-                        std::string errMsg(std::to_string(_line + 1) + " | ");
-                        errMsg += _input[_line] + "\n    ";
-                        for (size_t i = 0; i < _input[_line].size(); ++i) {
-                            if (i > _column - 1)
-                                break;
-                            errMsg += i >= curQueStart ? '^' : ' ';
-                        }
-                        errMsg += "  invalid unicode escape sequence";
+                        throw std::invalid_argument(_buildErrMsg(
+                            "invalid unicode escape sequence", _line,
+                            curQueStart, _column - 1));
+                    }
 
-                        throw std::invalid_argument(errMsg);
+                    if (count == 4) {
+                        continue;
                     }
                 } else if (_input[_line][_column + 1] == '\\') {
                     /* 针对两个反斜杠连续出现的问题:
@@ -171,16 +186,9 @@ namespace simpleJson {
                         _input[_line][_column + 1] != '\"') {
                         curQueStart = _column;
                         _column += 2;
-                        std::string errMsg(std::to_string(_line + 1) + " | ");
-                        errMsg += _input[_line] + "\n    ";
-                        for (size_t i = 0; i < _input[_line].size(); ++i) {
-                            if (i > _column - 1)
-                                break;
-                            errMsg += i >= curQueStart ? '^' : ' ';
-                        }
-                        errMsg += "  invalid escape sequence";
-
-                        throw std::invalid_argument(errMsg);
+                        throw std::invalid_argument(_buildErrMsg(
+                            "Invalid escape sequence", _line,
+                            curQueStart, _column - 1));
                     }
                 }
             }
@@ -192,16 +200,9 @@ namespace simpleJson {
         if (token.back() != '\"') {
             /* 出循环，两种可能: 遇到了右边的\"引号和到达一行的末尾。
              * 如果到达一行的末尾还没有遇到右边的引号，说明字符串没有关闭 */
-            std::string errMsg(std::to_string(_line + 1) + " | ");
-            errMsg += _input[_line] + "\n    ";
-            for (size_t i = 0; i < _input[_line].size(); ++i) {
-                if (i > _column - 1)
-                    break;
-                errMsg += i >= start ? '^' : ' ';
-            }
-            errMsg += "  lack of right quotation marks";
-
-            throw std::invalid_argument(errMsg);
+            throw std::invalid_argument(_buildErrMsg(
+                "lack of right quotation marks", _line,
+                start, _column - 1));
         }
 
         return {TokenType::STRING, token, _line, start};
@@ -251,16 +252,9 @@ namespace simpleJson {
         }
 
         if (isValid == false) {
-            std::string errMsg(std::to_string(_line + 1) + " | ");
-            errMsg += _input[_line] + "\n    ";
-            for (size_t i = 0; i < _input[_line].size(); ++i) {
-                if (i > _column - 1)
-                    break;
-                errMsg += i >= start ? '^' : ' ';
-            }
-            errMsg += "  invalid json number";
-
-            throw std::invalid_argument(errMsg);
+            throw std::invalid_argument(_buildErrMsg(
+                "invalid json number", _line,
+                start, _column - 1));
         }
 
         if (_input[_line][_column] == ',' || _input[_line][_column] == '}' ||
@@ -290,16 +284,9 @@ namespace simpleJson {
         } else if (token == "null") {
             type = TokenType::NULL_;
         } else {
-            std::string errMsg(std::to_string(_line + 1) + " | ");
-            errMsg += _input[_line] + "\n    ";
-            for (size_t i = 0; i < _input[_line].size(); ++i) {
-                if (i > _column - 1)
-                    break;
-                errMsg += i >= start ? '^' : ' ';
-            }
-            errMsg += "  invalid json value";
-
-            throw std::invalid_argument(errMsg);
+            throw std::invalid_argument(_buildErrMsg(
+                "invalid json value", _line,
+                start, _column - 1));
         }
 
         if (_input[_line][_column] == ',' || _input[_line][_column] == '}' ||
@@ -310,6 +297,73 @@ namespace simpleJson {
 
         return {type, token, _line, start};
     }
+
+    std::string Lexer::_buildErrMsg(
+        std::string &&msg, size_t line,
+        size_t highlightBegin, size_t highlightEnd) const noexcept {
+        const std::string rowNum = std::to_string(line + 1);
+        std::string errMsg(rowNum + " | ");
+        errMsg += _input[line] + "\n" + std::string(rowNum.size() + 3, ' ');
+        for (size_t i = 0; i < _input[line].size(); ++i) {
+            if (i > highlightEnd)
+                break;
+            errMsg += i >= highlightBegin ? '^' : ' ';
+        }
+        errMsg += "  " + msg;
+
+        return errMsg;
+    }
+
+    /* Parser */
+    Parser::Parser(const std::vector<Token> &tokens) noexcept
+        : _tokens(tokens)
+        , _curIndex(0)
+        , _curToken(_tokens[_curIndex]) {}
+
+    void Parser::parse() {
+        if (_curToken.type() == TokenType::LBRACE) {
+            _parseObject();
+        } else if (_curToken.type() == TokenType::LBRACKET) {
+            _parseArray();
+        } else {
+            if (_curIndex == 0) {
+                throw std::invalid_argument(_buildErrMsg(
+                    "the top layer of json must be an object or an array"));
+            }
+
+            _advance();
+        }
+    }
+
+    void Parser::_parseObject() {
+
+    }
+
+    void Parser::_parseArray() {
+    }
+
+    void Parser::_consume(TokenType expected, std::string&& errMsg) {
+        if (_curToken.type() == expected) {
+            _advance();
+        } else {
+            throw std::invalid_argument(_buildErrMsg(std::move(errMsg)));
+        }
+    }
+
+    Token &Parser::_advance() {
+        if (_curIndex >= _tokens.size() ) {
+            throw std::invalid_argument("_advance() out of range");
+        }
+
+        ++_curIndex;
+        _curToken = _tokens[_curIndex];
+        return _curToken;
+    }
+
+    std::string Parser::_buildErrMsg(std::string&& msg) const noexcept {
+        return msg;
+    }
+
 
 #else  // #if __cplusplus >= 201703L
     /* --- JsonSyntaxChecker --- */
