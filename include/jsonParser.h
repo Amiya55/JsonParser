@@ -10,7 +10,7 @@ namespace simpleJson {
 #if __cplusplus >= 201703L
     enum class TokenType {
         LBRACE, RBRACE, LBRACKET, RBRACKET,
-        COMMA, COLON, STRING, NUMBER, TRUE, FALSE, NULL_, END
+        COMMA, COLON, STRING, NUMBER, TRUE, FALSE, NULL_
     };
 
     struct Token {
@@ -21,13 +21,10 @@ namespace simpleJson {
         size_t _line;
         size_t _column;
 
-        Token(const TokenType type, const std::string &value,
-              size_t line, size_t column)
-            : _type(type)
-              , _value(value)
-              , _line(line)
-              , _column(column) {
-        }
+        Token(TokenType type, const std::string &value,
+              size_t line, size_t column);
+
+        TokenType type() const;
     };
 
     /* lexical analyser */
@@ -43,22 +40,41 @@ namespace simpleJson {
         explicit Lexer(const std::string &input); // 可能抛出invalid_argument异常
 
         void peekToken(); // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
-        std::vector<Token> &getTokens() noexcept;
+        std::vector<Token> getTokens() noexcept;
 
     private:
         void _skipWhitespace() noexcept;
 
         Token _parseString(); // 检测字符串; 可能抛出invalid_argument异常
-
         Token _parseNumber(); // 检测数字: 整数，浮点，负数，科学计数法; 可能抛出invalid_argument异常
-
         Token _parseKeyword(); // 检测是否为true, false, null; 可能抛出invalid_argument异常
+
+        std::string _buildErrMsg(
+            std::string &&msg, size_t line, // 构造异常信息，高亮显示错误位置
+            size_t highlightBegin, size_t highlightEnd) const noexcept;
     };
 
 
     /* syntax analyser */
     class Parser {
+        std::vector<Token> _tokens;
+        size_t _curIndex;
+
+        Token _curToken;
+
     public:
+        explicit Parser(const std::vector<Token> &tokens) noexcept;
+
+        void parse(); // 开始进行语法解析
+
+    private:
+        void _parseObject(); // 解析json对象
+        void _parseArray(); // 解析json数组
+
+        void _consume(TokenType expected, std::string&& errMsg); // 预测值，如果值不符合，抛异常
+        Token &_advance(); // 向前探测一个token
+
+        std::string _buildErrMsg(std::string&& msg) const noexcept; // 构建错误信息，高亮错误
     };
 
 #else  // #if __cplusplus >= 201703L
