@@ -1,5 +1,6 @@
 #include <exception>
 #include <iostream>
+#include <fstream>
 #include "iniParser.h"
 #include "jsonParser.h"
 #include "jsonTypes.h"
@@ -30,11 +31,21 @@ void read_from_json() {
         // JsonFile jf;
         // jf.open_json("data.json");
 
-        std::string json("     null    , \n  null,  ggsh, null false");
+        // std::string json("     null    , \n  null,  ggsh, null false");
+        // std::string json("     \"\\u4e00678\": \"   \\n\\\\t\"\n, \" hello,  ");
+        // std::string json("    12e23,\n  \\m123, 123\n 12.23e3  343e23");
+        std::string json(load_json());
+        // std::string json("1, 2");
         simpleJson::Lexer le(json);
         le.peekToken();
+        for (auto& e : le.getTokens()) {
+            std::cout << e._value << "\n";
+        }
+        std::cout << std::endl;
+
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
+
     }
 }
 

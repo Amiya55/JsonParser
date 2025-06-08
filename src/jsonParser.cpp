@@ -79,9 +79,9 @@ namespace simpleJson {
                             break;
 
                         if (std::isalpha(_input[_line][_column])) {
-                            _parseKeyword();
+                            _tokens.emplace_back(_parseKeyword());
                         } else if (std::isdigit(_input[_line][_column])) {
-                            _parseNumber();
+                            _tokens.emplace_back(_parseNumber());
                         } else {
                             std::string errMsg(std::to_string(_line + 1) + " | ");
                             errMsg += _input[_line] + "\n    ";
@@ -100,6 +100,10 @@ namespace simpleJson {
         }
     }
 
+    std::vector<Token> &Lexer::getTokens() noexcept {
+        return _tokens;
+    }
+
     void Lexer::_skipWhitespace() noexcept {
         while (_line < _input.size() &&
                std::isspace(_input[_line][_column])) {
@@ -112,31 +116,35 @@ namespace simpleJson {
     }
 
     Token Lexer::_parseString() {
-        std::string token;
-        size_t start = _column;
+        size_t start = _column; // 当前字符串的起始位置
+        ++_column; // 对_column加加，跳过左边的\"引号
+        std::string token("\"");
+        size_t curQueStart = 0; // 当前转义序列起始位置(配合实现更精准的错误高亮打印)
 
-        while (_column < _input[_line].size() && _input[_line][_column] != ',') {
-            if (_column == 0) // 如果是第一个字符，直接添加进去，因为这个字符肯定是\"
-                token += _input[_line][_column];
+        while (_column < _input[_line].size()) {
+            if (_input[_line][_column] == '\"' && _input[_line][_column - 1] != '\\') {
+                /* 一旦遇到右边的\"引号，直接跳出循环 */
+                token += "\"";
+                break;
+            }
 
             if (_input[_line][_column] == '\\' && _column + 1 < _input[_line].size()) {
                 /* 分析转义字符是否合法 */
-                if (_input[_line][_column + 1] == '"') {
-                    token += "\"";
-                    break;
-                }
                 if (_input[_line][_column + 1] == 'u') {
+                    token += "\\u";
+                    curQueStart = _column; // 当前的转义序列起始位置(配合错误高亮打印)
                     _column += 2;
                     bool isValid = true;
 
                     size_t count = 0;
-                    for (count = 0; count < 4 && _column < _input[_line].size(); ++count) {
+                    for (count = 0; count < 4 && _column < _input[_line].size(); ++count, ++_column) {
                         if (!std::isdigit(_input[_line][_column]) &&
-                            (_input[_line][_column] < 'a' || _input[_line][_column] > 'f')) {
+                            !(_input[_line][_column] >= 'a' && _input[_line][_column] <= 'f') &&
+                            !(_input[_line][_column] >= 'A' && _input[_line][_column] <= 'F')) {
                             /* Unicode序列必须是四位16进制字符序列 */
                             isValid = false;
-                            break;
                         }
+                        token += _input[_line][_column];
                     }
 
                     if (count < 4 || isValid == false) {
@@ -145,44 +153,131 @@ namespace simpleJson {
                         for (size_t i = 0; i < _input[_line].size(); ++i) {
                             if (i > _column - 1)
                                 break;
-                            errMsg += i >= start ? '^' : ' ';
+                            errMsg += i >= curQueStart ? '^' : ' ';
                         }
-                        errMsg += "  invalid unicode value";
+                        errMsg += "  invalid unicode escape sequence";
+
+                        throw std::invalid_argument(errMsg);
+                    }
+                } else if (_input[_line][_column + 1] == '\\') {
+                    /* 针对两个反斜杠连续出现的问题:
+                     * \m非法，但是\\m是合法的，因为第二个反斜杠与第一个配对而不是与m配对 */
+                    token += "\\"; // 直接将当前的反斜杠添加到token中
+                    ++_column; // 对_column加加一次，跳过第二个反斜杠，再由循环末尾的++_column将第二个反斜杠添加到token中
+                } else {
+                    if (_input[_line][_column + 1] != 'n' && _input[_line][_column + 1] != 't' &&
+                        _input[_line][_column + 1] != 'f' && _input[_line][_column + 1] != 'b' &&
+                        _input[_line][_column + 1] != 'r' && _input[_line][_column + 1] != '/' &&
+                        _input[_line][_column + 1] != '\"') {
+                        curQueStart = _column;
+                        _column += 2;
+                        std::string errMsg(std::to_string(_line + 1) + " | ");
+                        errMsg += _input[_line] + "\n    ";
+                        for (size_t i = 0; i < _input[_line].size(); ++i) {
+                            if (i > _column - 1)
+                                break;
+                            errMsg += i >= curQueStart ? '^' : ' ';
+                        }
+                        errMsg += "  invalid escape sequence";
 
                         throw std::invalid_argument(errMsg);
                     }
                 }
-
-                if (_input[_line][_column + 1] != 'n' &&
-                    _input[_line][_column + 1] != 't' &&
-                    _input[_line][_column + 1] != 'f' &&
-                    _input[_line][_column + 1] != 'b' &&
-                    _input[_line][_column + 1] != 'r' &&
-                    _input[_line][_column + 1] != '/') {
-                }
-            }
-
-            if (_input[_line][_column] == '\"' && _input[_line][_column - 1] == '\\') {
-                /* 遇到右边的引号，跳出循环 */
-                token += "\"";
-                break;
             }
 
             token += _input[_line][_column];
             ++_column;
         }
 
+        if (token.back() != '\"') {
+            /* 出循环，两种可能: 遇到了右边的\"引号和到达一行的末尾。
+             * 如果到达一行的末尾还没有遇到右边的引号，说明字符串没有关闭 */
+            std::string errMsg(std::to_string(_line + 1) + " | ");
+            errMsg += _input[_line] + "\n    ";
+            for (size_t i = 0; i < _input[_line].size(); ++i) {
+                if (i > _column - 1)
+                    break;
+                errMsg += i >= start ? '^' : ' ';
+            }
+            errMsg += "  lack of right quotation marks";
+
+            throw std::invalid_argument(errMsg);
+        }
+
         return {TokenType::STRING, token, _line, start};
     }
 
     Token Lexer::_parseNumber() {
+        std::string token;
+        size_t start = _column;
+
+        bool isValid = true;
+        bool eExist = false; // 标记e的数量
+        bool pointExist = false; // 标记小数点的数量
+        while (_column < _input[_line].size() && !std::isspace(_input[_line][_column]) &&
+               _input[_line][_column] != ',' && _input[_line][_column] != '}' &&
+               _input[_line][_column] != ']') {
+            if (_input[_line][_column] == '-') {
+                if (_column != start || !isdigit(_input[_line][_column + 1])) {
+                    isValid = false;
+                }
+            } else if (_input[_line][_column] == '.') {
+                if (pointExist == false && // 必须只有一个小数点
+                    eExist == false && // 针对小数点的特殊情况，小数点不能在e之后出现
+                    _column != start && isdigit(_input[_line][_column - 1]) && // 小数点前必须是数字
+                    isdigit(_input[_line][_column + 1])) {
+                    // 小数点后必须是数字，这里不检查越界访问，因为string最后一位是'\0'
+                    pointExist = true;
+                } else {
+                    isValid = false;
+                }
+            } else if (_input[_line][_column] == 'e') {
+                if (eExist == false && // 必须只有一个e
+                    _column != start && isdigit(_input[_line][_column - 1]) && // e前必须是数字
+                    isdigit(_input[_line][_column + 1])) {
+                    // e后必须是数字
+                    eExist = true;
+                } else {
+                    isValid = false;
+                }
+            } else {
+                if (!isdigit(_input[_line][_column])) {
+                    isValid = false;
+                }
+            }
+
+            token += _input[_line][_column];
+            ++_column;
+        }
+
+        if (isValid == false) {
+            std::string errMsg(std::to_string(_line + 1) + " | ");
+            errMsg += _input[_line] + "\n    ";
+            for (size_t i = 0; i < _input[_line].size(); ++i) {
+                if (i > _column - 1)
+                    break;
+                errMsg += i >= start ? '^' : ' ';
+            }
+            errMsg += "  invalid json number";
+
+            throw std::invalid_argument(errMsg);
+        }
+
+        if (_input[_line][_column] == ',' || _input[_line][_column] == '}' ||
+            _input[_line][_column] == ']') {
+            /* 针对遇到逗号和右括号的情况，必须减减_column，否则会漏掉当前的字符 */
+            --_column;
+        }
+
+        return {TokenType::NUMBER, token, _line, start};
     }
 
     Token Lexer::_parseKeyword() {
         std::string token;
         size_t start = _column;
         while (!std::isspace(_input[_line][_column]) &&
-               _column < _input[_line].size() && _input[_line][_column] != ',') {
+               _column < _input[_line].size() && _input[_line][_column] != ',' &&
+               _input[_line][_column] != '}' && _input[_line][_column] != ']') {
             token += _input[_line][_column];
             ++_column;
         }
@@ -205,6 +300,12 @@ namespace simpleJson {
             errMsg += "  invalid json value";
 
             throw std::invalid_argument(errMsg);
+        }
+
+        if (_input[_line][_column] == ',' || _input[_line][_column] == '}' ||
+            _input[_line][_column] == ']') {
+            /* 针对遇到逗号和右括号的情况，必须减减_column，否则会漏掉当前的字符 */
+            --_column;
         }
 
         return {type, token, _line, start};

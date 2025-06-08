@@ -21,36 +21,38 @@ namespace simpleJson {
         size_t _line;
         size_t _column;
 
-        Token(const TokenType type, const std::string& value,
+        Token(const TokenType type, const std::string &value,
               size_t line, size_t column)
             : _type(type)
               , _value(value)
               , _line(line)
-              , _column(column) {}
+              , _column(column) {
+        }
     };
 
     /* lexical analyser */
     class Lexer {
-        std::vector<Token> _tokens;  // 通过词法分析器分析出来的token数组
+        std::vector<Token> _tokens; // 通过词法分析器分析出来的token数组
 
-        std::vector<std::string> _input;  // 通过二维数组，方便后面精确打印错误
+        std::vector<std::string> _input; // 通过二维数组，方便后面精确打印错误
 
         size_t _line = 0;
         size_t _column = 0;
 
     public:
-        explicit Lexer(const std::string &input);  // 可能抛出invalid_argument异常
+        explicit Lexer(const std::string &input); // 可能抛出invalid_argument异常
 
-        void peekToken();  // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
+        void peekToken(); // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
+        std::vector<Token> &getTokens() noexcept;
 
     private:
         void _skipWhitespace() noexcept;
 
-        Token _parseString();  // 检测字符串; 可能抛出invalid_argument异常
+        Token _parseString(); // 检测字符串; 可能抛出invalid_argument异常
 
-        Token _parseNumber();  // 检测数字: 整数，浮点，负数，科学计数法; 可能抛出invalid_argument异常
+        Token _parseNumber(); // 检测数字: 整数，浮点，负数，科学计数法; 可能抛出invalid_argument异常
 
-        Token _parseKeyword();  // 检测是否为true, false, null; 可能抛出invalid_argument异常
+        Token _parseKeyword(); // 检测是否为true, false, null; 可能抛出invalid_argument异常
     };
 
 
