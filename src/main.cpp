@@ -8,7 +8,7 @@
 
 std::string load_json() {
     std::fstream fs;
-    fs.open("data.json", std::ios::in);
+    fs.open("tmp.json", std::ios::in);
     if (!fs.is_open()) {
         throw std::runtime_error("cannot find json file! check the path");
     }
@@ -34,9 +34,9 @@ void read_from_json() {
         // std::string json("     null    , \n  null,  ggsh, null false");
         // std::string json("     \"\\u4e00678\": \"   \\n\\\\t\"\n, \" hello,  ");
         // std::string json("    12e23,\n  \\m123, 123\n 12.23e3  343e23");
-        // std::string json(load_json());
+        std::string json(load_json());
         // std::string json("\n\"s\": \"\",\n \"ok\":\"1\"");
-        std::string json("{\n\"hello\": true\n,}");
+        // std::string json("{\n\"hello\": true,\n \"null\":[null, false,]\n}");
         simpleJson::Lexer le(json);
         // std::cout << json << std::endl;
         le.peekToken();

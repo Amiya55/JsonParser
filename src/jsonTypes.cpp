@@ -48,7 +48,7 @@ namespace simpleJson {
         _data._null = nullptr;
     }
 
-    JsonValue::JsonValue(int value)
+    JsonValue::JsonValue(long long value)
         : _type(JsonType::Int) {
         _data._int = value;
     }

@@ -21,7 +21,9 @@ namespace simpleJson {
 
         Token(TokenType type, const std::string &value,
               size_t line, size_t column);
+        Token(const Token &other) = default;
 
+        Token& operator=(const Token &other) = default;
         TokenType type() const;
     };
 
@@ -75,12 +77,14 @@ namespace simpleJson {
         JsonValue _parseArray(); // 解析json数组
 
         bool _consume(TokenType expected) const noexcept; // 预测值，如果值不符合，抛异常
+        const Token &_peekPrev() const;
         const Token &_peek() const;
-
+        const Token &_peekNext() const;
         const Token &_advance(); // 向前探测一个token
         bool _match(TokenType type) const noexcept;
+        bool _isAtEnd() const noexcept;
 
-        std::string _buildErrMsg(std::string &&msg, size_t highlightBegin) const noexcept; // 构建错误信息，高亮错误
+        std::string _buildErrMsg(std::string &&msg, const Token& highlightObj) const noexcept; // 构建错误信息，高亮错误
     };
 }
 
