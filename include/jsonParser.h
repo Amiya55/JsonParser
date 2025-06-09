@@ -76,15 +76,16 @@ namespace simpleJson {
         JsonValue _parseObject(); // 解析json对象
         JsonValue _parseArray(); // 解析json数组
 
-        bool _consume(TokenType expected) const noexcept; // 预测值，如果值不符合，抛异常
         const Token &_peekPrev() const;
         const Token &_peek() const;
         const Token &_peekNext() const;
         const Token &_advance(); // 向前探测一个token
-        bool _match(TokenType type) const noexcept;
+        bool _match(const Token& token, TokenType type) const noexcept;
         bool _isAtEnd() const noexcept;
 
-        std::string _buildErrMsg(std::string &&msg, const Token& highlightObj) const noexcept; // 构建错误信息，高亮错误
+        std::string _buildErrMsg(
+            std::string &&msg,
+            const Token& highlightObj, size_t offset = 0) const noexcept; // 构建错误信息，高亮错误
     };
 }
 

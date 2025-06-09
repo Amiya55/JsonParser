@@ -2,6 +2,7 @@
 #include "jsonTypes.h"
 #include <cctype>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -301,8 +302,10 @@ namespace simpleJson {
         size_t highlightBegin, size_t highlightEnd) const noexcept {
         const std::string rowNum = std::to_string(line + 1);
         std::string errMsg(rowNum + " | ");
+        const size_t indent = errMsg.size();
+
         errMsg += _input[line] + "\n" + std::string(rowNum.size() + 3, ' ');
-        for (size_t i = 0; i < _input[line].size(); ++i) {
+        for (size_t i = 0; i < _input[line].size() + indent; ++i) {
             if (i > highlightEnd)
                 break;
             errMsg += i >= highlightBegin ? '^' : ' ';
@@ -355,7 +358,8 @@ namespace simpleJson {
             case TokenType::NULL_:
                 return JsonValue();
             default:
-                throw std::invalid_argument(_buildErrMsg("invalid value", _peek()));
+                throw std::invalid_argument(_buildErrMsg(
+                    "invalid value", _peek()));
         }
     }
 
@@ -370,39 +374,56 @@ namespace simpleJson {
 
         std::unordered_map<std::string, JsonValue> obj;
 
-        while (!_isAtEnd() && _curToken.type() != TokenType::RBRACE) {
+        while (!_isAtEnd() && !_match(_peek(), TokenType::RBRACE)) {
             std::string key(_curToken._value);
 
-            if (!_isAtEnd() && _consume(TokenType::STRING)) {
+            if (!_isAtEnd() && _match(_peek(), TokenType::STRING)) {
                 _advance();
             } else {
                 throw std::invalid_argument(_buildErrMsg(
-                    "the json object expected a string as key", _peek()));
+                    "the json object expected a string as key",
+                    _peek()));
             }
 
-            if (!_isAtEnd() && _consume(TokenType::COLON)) {
+            if (!_isAtEnd() && _match(_peek(), TokenType::COLON)) {
                 _advance();
             } else {
                 throw std::invalid_argument(_buildErrMsg(
                     "the json object expected key-value module, here should be :",
-                    _peekPrev()));
+                    _peekPrev(), _peekPrev()._value.size()));
             }
 
             const JsonValue val = _parseValue();
             obj[key] = val;
             _advance();
 
-            if (_match(TokenType::COMMA)) {
-                if (!_isAtEnd() && _peekNext().type() == TokenType::RBRACE) {
-                    throw std::invalid_argument(_buildErrMsg(
-                        "json standard does not allow the use of trailing commas", _peekPrev()));
-                }
+            if (!_isAtEnd() && _match(_peek(), TokenType::COMMA)) {
                 _advance();
-            } else {
-                if (_peek().type() != TokenType::RBRACE) {
+                if (_isAtEnd()) {
+                    // 对应情况: {"hello": null, 缺少右括号
                     throw std::invalid_argument(_buildErrMsg(
-                        "expected ',' or '}'", _peek()));
+                        "expected <key> or replace the comma to '}'", _peekPrev(),
+                        _peekPrev()._value.size()));
                 }
+
+                if (_match(_peek(), TokenType::RBRACE)) {
+                    // 针对情况{"a": true, "b": false,} 末尾多出逗号
+                    throw std::invalid_argument(_buildErrMsg(
+                        "json standard does not allow the use of trailing commas",
+                        _peekPrev()));
+                }
+            } else if (!_isAtEnd() && !_match(_peek(), TokenType::COMMA)) {
+                if (!_match(_peek(), TokenType::RBRACE)) {
+                    // 对应情况{"a": true "b": false} 缺少逗号
+                    throw std::invalid_argument(_buildErrMsg(
+                        "expected ',' or '}'", _peekPrev(),
+                        _peekPrev()._value.size()));
+                }
+            } else {
+                // 针对情况{"hello": null 未闭合状态
+                throw std::invalid_argument(_buildErrMsg(
+                    "json object not closed, expected ',' or '}'", _peekPrev(),
+                    _peekPrev()._value.size()));
             }
         }
 
@@ -417,34 +438,43 @@ namespace simpleJson {
         }
         std::vector<JsonValue> arr;
 
-        while (!_isAtEnd() && _curToken.type() != TokenType::RBRACKET) {
+        while (!_isAtEnd() && !_match(_peek(), TokenType::RBRACKET)) {
             const JsonValue val = _parseValue();
             arr.push_back(val);
             _advance();
 
-            if (_match(TokenType::COMMA)) {
-                if (_peekNext().type() == TokenType::RBRACKET) {
-                    throw std::invalid_argument(_buildErrMsg(
-                        "json standard does not allow the use of trailing commas", _peek()));
-                }
+            if (!_isAtEnd() && _match(_peek(), TokenType::COMMA)) {
                 _advance();
-            } else {
-                if (_peek().type() != TokenType::RBRACKET) {
+                if (_isAtEnd()) {
                     throw std::invalid_argument(_buildErrMsg(
-                        "expected ',' or ']'", _peek()));
+                        "expected <value> or replace the comma to ']'", _peekPrev(),
+                        _peekPrev()._value.size()));
                 }
+
+                if (_match(_peek(), TokenType::RBRACKET)) {
+                    throw std::invalid_argument(_buildErrMsg(
+                        "json standard does not allow the use of trailing commas",
+                        _peekPrev()));
+                }
+            } else if (!_isAtEnd() && !_match(_peek(), TokenType::COMMA)) {
+                if (!_match(_peek(), TokenType::RBRACKET)) {
+                    throw std::invalid_argument(_buildErrMsg(
+                        "expected ',' or ']'", _peekPrev(),
+                        _peekPrev()._value.size()));
+                }
+            } else {
+                throw std::invalid_argument(_buildErrMsg(
+                    "json array not closed, expected ',' or ']'", _peekPrev(),
+                    _peekPrev()._value.size()));
             }
         }
 
         return JsonValue(arr);
     }
 
-    bool Parser::_consume(TokenType expected) const noexcept {
-        return _curToken.type() == expected;
-    }
-
     const Token &Parser::_peekPrev() const {
-        if (_curIndex - 1 < _lexer.getTokens().size()) {  // 因为是size_t类型，_curIndex - 1不可能为负数，不做<0的判断
+        if (_curIndex - 1 < _lexer.getTokens().size()) {
+            // 因为是size_t类型，_curIndex - 1不可能为负数，不做<0的判断
             return _lexer.getTokens()[_curIndex - 1];
         }
         throw std::out_of_range("Parser::_peekPrev() -> _curIndex - 1 out of range");
@@ -475,7 +505,7 @@ namespace simpleJson {
         throw std::invalid_argument("Parser::_advance() -> _curIndex out of range");
     }
 
-    bool Parser::_match(TokenType type) const noexcept {
+    bool Parser::_match(const Token &token, TokenType type) const noexcept {
         return _curToken.type() == type;
     }
 
@@ -484,14 +514,17 @@ namespace simpleJson {
     }
 
 
-    std::string Parser::_buildErrMsg(std::string &&msg, const Token& highlightObj) const noexcept {
+    std::string Parser::_buildErrMsg(std::string &&msg, const Token &highlightObj,
+                                     size_t offset) const noexcept {
         const size_t line = highlightObj._line;
-        const size_t highlightPos = highlightObj._column;
+        const size_t highlightPos = highlightObj._column + offset; // 这里的偏移量主要针对缺少:或者,之类的错误的精准高亮
 
         const std::string rowNum = std::to_string(line + 1);
         std::string errMsg(rowNum + " | ");
+        const size_t indent = errMsg.size(); // 前置行号信息缩进长度
+
         errMsg += _lexer.getInput()[line] + "\n" + std::string(rowNum.size() + 3, ' ');
-        for (size_t i = 0; i < _lexer.getInput()[line].size(); ++i) {
+        for (size_t i = 0; i < _lexer.getInput()[line].size() + indent; ++i) {
             if (i > highlightPos)
                 break;
             errMsg += i >= highlightPos ? '^' : ' ';
