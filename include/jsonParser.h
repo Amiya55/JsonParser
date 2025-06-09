@@ -1,13 +1,11 @@
 #ifndef JSONPARSER_H
 #define JSONPARSER_H
 
-#include <fstream>
 #include <string>
 #include <vector>
 #include "jsonTypes.h"
 
 namespace simpleJson {
-#if __cplusplus >= 201703L
     enum class TokenType {
         LBRACE, RBRACE, LBRACKET, RBRACKET,
         COMMA, COLON, STRING, NUMBER, TRUE, FALSE, NULL_
@@ -27,6 +25,7 @@ namespace simpleJson {
         TokenType type() const;
     };
 
+
     /* lexical analyser */
     class Lexer {
         std::vector<Token> _tokens; // 通过词法分析器分析出来的token数组
@@ -40,7 +39,9 @@ namespace simpleJson {
         explicit Lexer(const std::string &input); // 可能抛出invalid_argument异常
 
         void peekToken(); // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
-        std::vector<Token> getTokens() noexcept;
+        const std::vector<Token> &getTokens() const noexcept;
+
+        const std::vector<std::string> &getInput() const noexcept;
 
     private:
         void _skipWhitespace() noexcept;
@@ -57,64 +58,30 @@ namespace simpleJson {
 
     /* syntax analyser */
     class Parser {
-        std::vector<Token> _tokens;
+        const Lexer &_lexer;
         size_t _curIndex;
-
         Token _curToken;
 
+        JsonValue _ast; // 抽象语法树
+
     public:
-        explicit Parser(const std::vector<Token> &tokens) noexcept;
+        explicit Parser(const Lexer &lexer) noexcept;
 
         void parse(); // 开始进行语法解析
 
     private:
-        void _parseObject(); // 解析json对象
-        void _parseArray(); // 解析json数组
+        JsonValue _parseValue(); // 解析json值
+        JsonValue _parseObject(); // 解析json对象
+        JsonValue _parseArray(); // 解析json数组
 
-        void _consume(TokenType expected, std::string&& errMsg); // 预测值，如果值不符合，抛异常
-        Token &_advance(); // 向前探测一个token
+        bool _consume(TokenType expected) const noexcept; // 预测值，如果值不符合，抛异常
+        const Token &_peek() const;
 
-        std::string _buildErrMsg(std::string&& msg) const noexcept; // 构建错误信息，高亮错误
+        const Token &_advance(); // 向前探测一个token
+        bool _match(TokenType type) const noexcept;
+
+        std::string _buildErrMsg(std::string &&msg, size_t highlightBegin) const noexcept; // 构建错误信息，高亮错误
     };
-
-#else  // #if __cplusplus >= 201703L
-
-    class JsonSyntaxChecker {
-    public:
-        JsonSyntaxChecker() = default;
-        ~JsonSyntaxChecker() = default;
-
-        void syntax_check(const std::string &jsonStr,
-                          JsonValue::Type containerType); // may throw exception: runtime_error
-
-    private:
-        // check the key in json object
-        void _check_key(const std::string &key); // may throw exception: runtime_error
-        // check the value in json object, also it can check the element in json array
-        void _check_value(const std::string &value); // may throw exception: runtime_error
-    };
-
-    class JsonFile {
-    public:
-        JsonFile();
-        ~JsonFile();
-
-        void open_json(const char *fileName); // may throw exception: runtime_error
-        void close_json() noexcept;
-        bool is_open() noexcept;
-
-    private:
-        std::string _fileName;
-        std::fstream _file;
-
-        std::string _jsonStr; // the json data, raw str data from the .json file
-        JsonValue *_jsonData; // the json data, maybe json object or json array
-
-        // transform the json str into our json classes and get ready to operate
-        void _parse_data(JsonValue *mountPoint, std::string &strs) noexcept;
-    };
-
-#endif  // #if __cplusplus >= 201703L
 }
 
 #endif // JSONPARSER_H
