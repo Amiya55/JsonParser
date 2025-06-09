@@ -1,127 +1,90 @@
 #ifndef JsonValueS_H
 #define JsonValueS_H
 
-#include <cstddef>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
+#include <cstddef>
 
-class JsonValue {
-public:
-    enum class Type { Object, Array, String, Int, Float, Bool, Null };
+#if __cplusplus >= 201703L
+#include <variant>
+#endif  // __cplusplus >= 201703L
 
-    virtual ~JsonValue() = default;
-    virtual Type type() const = 0;
-};
+namespace simpleJson {
+    enum class JsonType {
+        Object, Array, String,
+        Int, Float, Bool,
+        Null
+    };
 
+#if __cplusplus >= 201703L
+    class JsonValue {
+        JsonType _type;
+        std::variant<std::string, std::vector<JsonValue>,
+            std::unordered_map<std::string, JsonValue>,
+            int, double, bool, std::nullptr_t> _value;
 
-class JsonInt : public JsonValue {
-public:
-    explicit JsonInt(long long value);
+    public:
+        explicit JsonValue();
 
-    bool operator==(const JsonInt &obj) const;
-    bool operator==(long long value) const;
+        explicit JsonValue(int value);
 
-    virtual Type type() const;
+        explicit JsonValue(double value);
 
-private:
-    long long _int;
-};
+        explicit JsonValue(bool value);
 
+        explicit JsonValue(const std::string &value);
 
-class JsonFlt : public JsonValue {
-public:
-    explicit JsonFlt(double value);
+        explicit JsonValue(const std::vector<JsonValue> &value);
 
-    bool operator==(const JsonFlt &obj) const;
-    bool operator==(double value) const;
+        explicit JsonValue(const std::unordered_map<std::string, JsonValue> &value);
 
-    virtual Type type() const;
+        [[nodiscard]] JsonType getType() const;
 
-private:
-    double _flt;
-};
+    };
 
+#else  // _cplusplus >= 201703L
+    class JsonValue {
+        JsonType _type;
 
-class JsonBool : public JsonValue {
-public:
-    explicit JsonBool(bool value);
+        union JsonData {
+            std::unordered_map<std::string, JsonValue> _object;
+            std::vector<JsonValue> _array;
+            std::string _string;
+            int _int{};
+            double _float;
+            bool _bool;
+            std::nullptr_t _null;
 
-    bool operator==(const JsonBool &obj) const;
-    bool operator==(bool value) const;
+            JsonData();
 
-    virtual Type type() const;
+            ~JsonData();
+        } _data;
 
-private:
-    bool _flag;
-};
+    public:
+        explicit JsonValue();
 
+        explicit JsonValue(int value);
 
-class JsonStr : public JsonValue {
-public:
-    explicit JsonStr(const std::string &value = "");
+        explicit JsonValue(double value);
 
-    const std::string &string() const;
+        explicit JsonValue(bool value);
 
-    void push(const JsonStr &obj);
-    void push(const char *str);
+        explicit JsonValue(const std::string &value);
 
-    bool operator==(const JsonStr &obj) const;
-    bool operator==(const std::string &value) const;
-    bool operator==(const char *value) const;
+        explicit JsonValue(const std::vector<JsonValue> &value);
 
-    char &operator[](size_t pos);
+        explicit JsonValue(const std::unordered_map<std::string, JsonValue> &value);
 
-    virtual size_t size() const;
-    virtual Type type() const;
+        JsonValue(const JsonValue &value);
 
-private:
-    std::string _str;
-};
+        ~JsonValue();
 
+        JsonValue &operator=(const JsonValue &value);
 
-class JsonObj : public JsonValue {
-public:
-    explicit JsonObj();
-
-    void push(const std::pair<std::string, JsonValue *> &pair);
-
-    JsonValue *operator[](const JsonStr &key);
-    JsonValue *operator[](const std::string &key);
-    JsonValue *operator[](const char *key);
-
-    virtual size_t size() const;
-    virtual Type type() const;
-
-private:
-    std::unordered_map<std::string, JsonValue *> _dict;
-};
-
-
-class JsonArr : public JsonValue {
-public:
-    explicit JsonArr();
-
-    void push(const JsonValue &obj);
-
-    JsonValue *operator[](size_t pos);
-
-    virtual size_t size() const;
-    virtual Type type() const;
-
-private:
-    std::vector<JsonValue *> _arr;
-};
-
-
-class JsonNull : public JsonValue {
-public:
-    explicit JsonNull();
-
-    virtual Type type() const;
-
-private:
-};
+        JsonType getType() const;
+    };
+#endif  // _cplusplus >= 201703L
+}
 
 #endif // JsonValueS_H
