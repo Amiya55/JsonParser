@@ -51,7 +51,7 @@ namespace simpleJson {
             std::unordered_map<std::string, JsonValue> _object;
             std::vector<JsonValue> _array;
             std::string _string;
-            int _int{};
+            long long _int;
             double _float;
             bool _bool;
             std::nullptr_t _null;
@@ -64,7 +64,7 @@ namespace simpleJson {
     public:
         explicit JsonValue();
 
-        explicit JsonValue(int value);
+        explicit JsonValue(long long value);
 
         explicit JsonValue(double value);
 
