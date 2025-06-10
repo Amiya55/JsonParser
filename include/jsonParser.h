@@ -79,7 +79,7 @@ namespace simpleJson {
         const Token &_peekPrev() const;
         const Token &_peek() const;
         const Token &_peekNext() const;
-        const Token &_advance(); // 向前探测一个token
+        void _advance(); // 向前探测一个token
         bool _match(const Token& token, TokenType type) const noexcept;
         bool _isAtEnd() const noexcept;
 
