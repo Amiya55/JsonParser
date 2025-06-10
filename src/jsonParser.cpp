@@ -341,7 +341,7 @@ namespace simpleJson {
         }
     }
 
-    const JsonValue &Parser::getAst() const noexcept {
+    JsonValue &Parser::getAst() noexcept {
         return _ast;
     }
 

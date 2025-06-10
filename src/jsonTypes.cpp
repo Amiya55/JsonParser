@@ -48,9 +48,24 @@ namespace simpleJson {
         _data._null = nullptr;
     }
 
+    JsonValue::JsonValue(int value)
+        : _type(JsonType::Int) {
+        _data._int = value;
+    }
+
+    JsonValue::JsonValue(long value)
+        : _type(JsonType::Int) {
+        _data._int = value;
+    }
+
     JsonValue::JsonValue(long long value)
         : _type(JsonType::Int) {
         _data._int = value;
+    }
+
+    JsonValue::JsonValue(float value)
+        : _type(JsonType::Float) {
+        _data._float = value;
     }
 
     JsonValue::JsonValue(double value)
@@ -63,22 +78,42 @@ namespace simpleJson {
         _data._bool = value;
     }
 
-    JsonValue::JsonValue(const std::string &value)
+    JsonValue::JsonValue(std::string &value)
         : _type(JsonType::String) {
         new(&_data._string) std::string(value);
     }
 
-    JsonValue::JsonValue(const std::vector<JsonValue> &value)
+    JsonValue::JsonValue(std::string &&value)
+        : _type(JsonType::String) {
+        new(&_data._string) std::string(std::move(value));
+    }
+
+    JsonValue::JsonValue(const char *value)
+        : _type(JsonType::String) {
+        new(&_data._string) std::string(value);
+    }
+
+    JsonValue::JsonValue(std::vector<JsonValue> &value)
         : _type(JsonType::Array) {
         new(&_data._array) std::vector<JsonValue>(value);
     }
 
-    JsonValue::JsonValue(const std::unordered_map<std::string, JsonValue> &value)
+    JsonValue::JsonValue(std::vector<JsonValue> &&value)
+        : _type(JsonType::Array) {
+        new(&_data._array) std::vector<JsonValue>(std::move(value));
+    }
+
+    JsonValue::JsonValue(std::unordered_map<std::string, JsonValue> &value)
         : _type(JsonType::Object) {
         new(&_data._object) std::unordered_map<std::string, JsonValue>(value);
     }
 
-    JsonValue::JsonValue(const JsonValue &value) {
+    JsonValue::JsonValue(std::unordered_map<std::string, JsonValue> &&value)
+        : _type(JsonType::Object) {
+        new(&_data._object) std::unordered_map<std::string, JsonValue>(std::move(value));
+    }
+
+    JsonValue::JsonValue(const JsonValue &value) noexcept {
         _type = value._type;
         switch (value._type) {
             case JsonType::Null:
@@ -107,7 +142,7 @@ namespace simpleJson {
         }
     }
 
-    JsonValue::~JsonValue() {
+    void JsonValue::_destory() noexcept {
         switch (_type) {
             case JsonType::Object:
                 _data._object.~unordered_map();
@@ -121,9 +156,15 @@ namespace simpleJson {
             default:
                 ;
         }
+        _type = JsonType::Null;
     }
 
-    JsonValue &JsonValue::operator=(const JsonValue &value) {
+
+    JsonValue::~JsonValue() {
+        _destory();
+    }
+
+    JsonValue &JsonValue::operator=(const JsonValue &value) noexcept {
         if (this == &value) {
             this->~JsonValue();
         }
@@ -159,8 +200,170 @@ namespace simpleJson {
     }
 
 
-    JsonType JsonValue::getType() const {
+    JsonType JsonValue::getType() const noexcept {
         return _type;
     }
+
+    long long &JsonValue::getInt() {
+        if (_type != JsonType::Int) {
+            throw std::runtime_error("json type is not int");
+        }
+        return _data._int;
+    }
+
+    double &JsonValue::getFloat() {
+        if (_type != JsonType::Float) {
+            throw std::runtime_error("json type is not float");
+        }
+        return _data._float;
+    }
+
+    bool &JsonValue::getBool() {
+        if (_type != JsonType::Bool) {
+            throw std::runtime_error("json type is not bool");
+        }
+        return _data._bool;
+    }
+
+    std::string &JsonValue::getString() {
+        if (_type != JsonType::String) {
+            throw std::runtime_error("json type is not string");
+        }
+        return _data._string;
+    }
+
+    std::vector<JsonValue> &JsonValue::getArray() {
+        if (_type != JsonType::Array) {
+            throw std::runtime_error("json type is not array");
+        }
+        return _data._array;
+    }
+
+    std::unordered_map<std::string, JsonValue> &JsonValue::getObject() {
+        if (_type != JsonType::Object) {
+            throw std::runtime_error("json type is not object");
+        }
+        return _data._object;
+    }
+
+    JsonValue &JsonValue::operator=(int val) {
+        _destory();
+
+        _data._int = val;
+        _type = JsonType::Int;
+
+        return *this;
+    }
+
+
+    JsonValue &JsonValue::operator=(long val) noexcept {
+        _destory();
+
+        _data._int = val;
+        _type = JsonType::Int;
+
+        return *this;
+    }
+
+
+    JsonValue &JsonValue::operator=(long long val) noexcept {
+        _destory();
+
+        _data._int = val;
+        _type = JsonType::Int;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(float val) noexcept {
+        _destory();
+
+        _data._float = val;
+        _type = JsonType::Float;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(double val) noexcept {
+        _destory();
+
+        _data._float = val;
+        _type = JsonType::Float;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(bool val) noexcept {
+        _destory();
+
+        _data._bool = val;
+        _type = JsonType::Bool;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::string &val) noexcept {
+        _destory();
+
+        new(&_data._string) std::string(val);
+        _type = JsonType::String;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::string &&val) noexcept {
+        _destory();
+
+        new(&_data._string) std::string(std::move(val));
+        _type = JsonType::String;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(const char *val) noexcept {
+        _destory();
+
+        new(&_data._string) std::string(val);
+        _type = JsonType::String;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::vector<JsonValue> &val) noexcept {
+        _destory();
+
+        new(&_data._array) std::vector<JsonValue>(val);
+        _type = JsonType::Array;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::vector<JsonValue> &&val) noexcept {
+        _destory();
+
+        new(&_data._array) std::vector<JsonValue>(std::move(val));
+        _type = JsonType::Array;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::unordered_map<std::string, JsonValue> &val) noexcept {
+        _destory();
+
+        new(&_data._object) std::unordered_map<std::string, JsonValue>(val);
+        _type = JsonType::Object;
+
+        return *this;
+    }
+
+    JsonValue &JsonValue::operator=(std::unordered_map<std::string, JsonValue> &&val) noexcept {
+        _destory();
+
+        new(&_data._object) std::unordered_map<std::string, JsonValue>(std::move(val));
+        _type = JsonType::Object;
+
+        return *this;
+    }
+
 #endif  // _cplusplus >= 201703L
 }
