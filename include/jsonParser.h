@@ -42,12 +42,18 @@ namespace simpleJson {
     public:
         explicit Lexer(const std::string &input); // 可能抛出invalid_argument异常
 
-        void peekToken(); // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
+        Lexer(Lexer &other) = delete;
+        Lexer (Lexer &&other) = delete;
+        Lexer &operator=(Lexer &other) = delete;
+        Lexer &operator=(Lexer &&other) = delete;
+
         const std::vector<Token> &getTokens() const noexcept;
 
         const std::vector<std::string> &getInput() const noexcept;
 
     private:
+        void _splitToken(); // 遍历json字符串，构建token数组; 可能抛出invalid_argument异常
+
         void _skipWhitespace() noexcept;
 
         Token _parseString(); // 检测字符串; 可能抛出invalid_argument异常
@@ -70,6 +76,11 @@ namespace simpleJson {
 
     public:
         explicit Parser(const Lexer &lexer) noexcept;
+
+        Parser(Parser &other) = delete;
+        Parser(Parser &&other) = delete;
+        Parser &operator=(Parser &other) = delete;
+        Parser &operator=(Parser &&other) = delete;
 
         void parse(); // 开始进行语法解析
         const JsonValue &getAst() const noexcept;

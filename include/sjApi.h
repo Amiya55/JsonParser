@@ -5,9 +5,33 @@
 */
 #include <string>
 
-namespace simpleJson {
-    bool jsonIsValid(const std::string& json);
+#include "jsonParser.h"
 
+namespace simpleJson {
+    class sJson {
+        std::unique_ptr<Lexer> _lexer;
+        std::unique_ptr<Parser> _parser;
+
+    public:
+        static sJson fromFile(const std::string &filePath);
+
+        static sJson fromStr(const std::string &jsonStr);
+
+        explicit sJson(sJson &) = delete;
+
+        sJson &operator=(sJson &) = delete;
+
+        sJson(sJson &&) = default;
+
+        sJson &operator=(sJson &&) = default;
+
+        ~sJson() = default;
+
+    private:
+        explicit sJson(const std::string &jsonStr);
+    };
+
+    // bool jsonIsValid(const std::string& json);
 }
 
 
