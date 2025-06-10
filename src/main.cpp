@@ -4,25 +4,10 @@
 #include "iniParser.h"
 #include "jsonParser.h"
 #include "jsonTypes.h"
+#include "sjApi.h"
 #include "utilities.h"
 
 // #define TEST
-
-std::string load_json() {
-    std::fstream fs;
-    fs.open("data.json", std::ios::in);
-    if (!fs.is_open()) {
-        throw std::runtime_error("cannot find json file! check the path");
-    }
-
-    std::string str;
-    std::string tmp;
-    while (getline(fs, tmp))
-        str += tmp + '\n';
-    fs.close();
-
-    return str;
-}
 
 #ifdef TEST
 // 测试，打印语法分析构建的ast
@@ -64,15 +49,28 @@ void printAst(simpleJson::JsonValue val) {
 }
 #endif
 
+std::string load_json() {
+    std::fstream fs;
+    fs.open("data.json", std::ios::in);
+    if (!fs.is_open()) {
+        throw std::runtime_error("cannot find json file! check the path");
+    }
+
+    std::string str;
+    std::string tmp;
+    while (getline(fs, tmp))
+        str += tmp + '\n';
+    fs.close();
+
+    return str;
+}
+
 void read_from_json() {
     try {
         std::string json(load_json());
         // std::string json("\n\"s\": \"\",\n \"ok\":\"1\"");
         // std::string json("{\n\"hello\": true,\n \"null\":[null, false,]\n}");
         simpleJson::Lexer le(json);
-        le.peekToken();
-
-        std::vector<std::string> ch;
 
         simpleJson::Parser pa(le);
         pa.parse();
@@ -84,7 +82,17 @@ void read_from_json() {
     }
 }
 
+void apiTest() {
+    try {
+        const std::string path("data.json");
+        simpleJson::sJson::fromFile(path);
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
 int main() {
-    read_from_json();
+    // read_from_json();
+    apiTest();
     return 0;
 }

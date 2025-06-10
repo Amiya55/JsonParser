@@ -39,9 +39,11 @@ namespace simpleJson {
             _input.emplace_back(input.substr(begin, end - begin));
             begin = end + 1;
         }
+
+        _splitToken();
     }
 
-    void Lexer::peekToken() {
+    void Lexer::_splitToken() {
         for (; _line < _input.size(); ++_line, _column = 0) {
             for (; _column < _input[_line].size(); ++_column) {
                 _skipWhitespace();
