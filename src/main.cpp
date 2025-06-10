@@ -8,7 +8,7 @@
 
 std::string load_json() {
     std::fstream fs;
-    fs.open("data.json", std::ios::in);
+    fs.open("tmp.json", std::ios::in);
     if (!fs.is_open()) {
         throw std::runtime_error("cannot find json file! check the path");
     }

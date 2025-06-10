@@ -323,17 +323,20 @@ namespace simpleJson {
     }
 
     void Parser::parse() {
-        if (_curToken.type() == TokenType::LBRACE) {
-            _ast = _parseObject();
-        } else if (_curToken.type() == TokenType::LBRACKET) {
-            _ast = _parseArray();
-        } else {
-            if (_curIndex == 0) {
+        // json文件最顶层必须是[]或者{}
+        switch (_curToken.type()) {
+            case TokenType::LBRACE:
+                _ast = _parseObject();
+                break;
+            case TokenType::LBRACKET:
+                _ast = _parseArray();
+                break;
+            default: {
+                const std::string curValMsg("'" + _peek()._value + "'");
                 throw std::invalid_argument(_buildErrMsg(
-                    "the top layer of json must be an object or an array", _peek()));
+                    "the top layer of json must be an object or an array, "
+                    "here should be '[' or '{', but got a " + curValMsg, _peek()));
             }
-
-            _advance();
         }
     }
 
@@ -345,7 +348,7 @@ namespace simpleJson {
                 return _parseArray();
             case TokenType::NUMBER:
                 if (_curToken._value.find('.') != std::string::npos ||
-                    _curToken._value.find("e-") != std::string::npos) {
+                    _curToken._value.find('e') != std::string::npos) {
                     return JsonValue(std::stod(_curToken._value));
                 }
                 return JsonValue(std::stoll(_curToken._value));
@@ -357,9 +360,14 @@ namespace simpleJson {
                 return JsonValue(true);
             case TokenType::NULL_:
                 return JsonValue();
-            default:
+            default: {
+                // 首先构建已经得到的token的信息
+                const std::string curValMsg("'" + _peek()._value + "'" +
+                                            " (at line " + std::to_string(_peek()._line + 1) + ")");
                 throw std::invalid_argument(_buildErrMsg(
-                    "invalid value", _peek()));
+                    "expected a valid value here, but got a " + curValMsg,
+                    _peekPrev(), _peekPrev()._value.size()));
+            }
         }
     }
 
@@ -369,7 +377,8 @@ namespace simpleJson {
         _advance();
         if (_isAtEnd()) {
             throw std::invalid_argument(_buildErrMsg(
-                "expected json object key or '}'", _peekPrev()));
+                "expected json object <key> or '}', but now we meet EOF",
+                _peekPrev()));
         }
 
         std::unordered_map<std::string, JsonValue> obj;
@@ -415,9 +424,12 @@ namespace simpleJson {
             } else if (!_isAtEnd() && !_match(_peek(), TokenType::COMMA)) {
                 if (!_match(_peek(), TokenType::RBRACE)) {
                     // 对应情况{"a": true "b": false} 缺少逗号
+                    // 或者情况{ "a": [1, { "b": 2 ], "c": 3 } 括号不匹配
+                    const std::string curValMsg("'" + _peek()._value + "'" +
+                                                " (at line " + std::to_string(_peek()._line + 1) + ")");
                     throw std::invalid_argument(_buildErrMsg(
-                        "expected ',' or '}'", _peekPrev(),
-                        _peekPrev()._value.size()));
+                        "expected ',' or '}' here, but got a " + curValMsg,
+                        _peekPrev(), _peekPrev()._value.size()));
                 }
             } else {
                 // 针对情况{"hello": null 未闭合状态
@@ -434,7 +446,8 @@ namespace simpleJson {
         _advance();
         if (_isAtEnd()) {
             throw std::invalid_argument(_buildErrMsg(
-                "json array not closed, expected ']'", _peekPrev()));
+                "expected json object <value> or ']', but now we meet EOF",
+                _peekPrev()));
         }
         std::vector<JsonValue> arr;
 
@@ -458,9 +471,11 @@ namespace simpleJson {
                 }
             } else if (!_isAtEnd() && !_match(_peek(), TokenType::COMMA)) {
                 if (!_match(_peek(), TokenType::RBRACKET)) {
+                    const std::string curValMsg("'" + _peek()._value + "'" +
+                                                " (at line " + std::to_string(_peek()._line + 1) + ")");
                     throw std::invalid_argument(_buildErrMsg(
-                        "expected ',' or ']'", _peekPrev(),
-                        _peekPrev()._value.size()));
+                        "expected ',' or ']' here, but got a " + curValMsg,
+                        _peekPrev(), _peekPrev()._value.size()));
                 }
             } else {
                 throw std::invalid_argument(_buildErrMsg(
@@ -496,11 +511,13 @@ namespace simpleJson {
     }
 
 
-    const Token &Parser::_advance() {
+    void Parser::_advance() {
         if (_curIndex < _lexer.getTokens().size()) {
             ++_curIndex; // 向前走一步
-            _curToken = _lexer.getTokens()[_curIndex];
-            return _lexer.getTokens()[_curIndex - 1]; // 返回为向前探测的值类似于后置++
+
+            if (_curIndex < _lexer.getTokens().size())
+                _curToken = _lexer.getTokens()[_curIndex];
+            return;
         }
         throw std::invalid_argument("Parser::_advance() -> _curIndex out of range");
     }
