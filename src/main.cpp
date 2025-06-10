@@ -6,9 +6,11 @@
 #include "jsonTypes.h"
 #include "utilities.h"
 
+// #define TEST
+
 std::string load_json() {
     std::fstream fs;
-    fs.open("tmp.json", std::ios::in);
+    fs.open("data.json", std::ios::in);
     if (!fs.is_open()) {
         throw std::runtime_error("cannot find json file! check the path");
     }
@@ -22,6 +24,7 @@ std::string load_json() {
     return str;
 }
 
+#ifdef TEST
 // 测试，打印语法分析构建的ast
 void printAst(simpleJson::JsonValue val) {
     switch (val.getType()) {
@@ -59,7 +62,7 @@ void printAst(simpleJson::JsonValue val) {
             ;
     }
 }
-
+#endif
 
 void read_from_json() {
     try {
@@ -75,7 +78,7 @@ void read_from_json() {
         pa.parse();
 
         simpleJson::JsonValue val(pa.getAst());
-        printAst(val);
+        // printAst(val);
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
