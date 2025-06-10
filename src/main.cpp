@@ -91,8 +91,49 @@ void apiTest() {
     }
 }
 
+void jsonValueTest() {
+    simpleJson::JsonValue val;
+
+    val = 10ll;
+    std::cout << val.getInt() << std::endl;
+
+    // val = std::string("hello world");
+    val = "hello world";
+    std::cout << val.getString() << std::endl;
+
+    simpleJson::JsonValue v1(1ll);
+    simpleJson::JsonValue v2(123.456);
+    simpleJson::JsonValue v3(3ll);
+    simpleJson::JsonValue v4("hello world");
+    simpleJson::JsonValue v5(false);
+    simpleJson::JsonValue v6(true);
+
+    // std::vector<simpleJson::JsonValue> vec = {v1, v2, v3, v4, v5, v6};
+    // val = std::move(vec);
+    val = {v1, v2, v3, v4, v5, v6};
+    for (simpleJson::JsonValue &ele: val.getArray()) {
+        switch (ele.getType()) {
+            case simpleJson::JsonType::Int:
+                std::cout << ele.getInt() << " ";
+                break;
+            case simpleJson::JsonType::Float:
+                std::cout << ele.getFloat() << " ";
+                break;
+            case simpleJson::JsonType::String:
+                std::cout << ele.getString() << " ";
+                break;
+            case simpleJson::JsonType::Bool:
+                std::cout << ele.getBool() << " ";
+            default:
+                ;
+        }
+    }
+    std::cout << std::endl;
+}
+
 int main() {
     // read_from_json();
-    apiTest();
+    // apiTest();
+    jsonValueTest();
     return 0;
 }

@@ -8,11 +8,29 @@
 #include "jsonParser.h"
 
 namespace simpleJson {
+    class jsonIterator {
+    public:
+        jsonIterator();
+
+        ~jsonIterator();
+
+    private:
+        // JsonValue&
+    };
+
+
     class sJson {
         std::unique_ptr<Lexer> _lexer;
         std::unique_ptr<Parser> _parser;
 
     public:
+        using iterator = jsonIterator;
+        using const_iterator = const jsonIterator;
+
+        iterator begin();
+
+        iterator end();
+
         static sJson fromFile(const std::string &filePath);
 
         static sJson fromStr(const std::string &jsonStr);
@@ -31,7 +49,6 @@ namespace simpleJson {
         explicit sJson(const std::string &jsonStr);
     };
 
-    // bool jsonIsValid(const std::string& json);
 }
 
 

@@ -8,6 +8,18 @@
 #endif
 
 namespace simpleJson {
+    // jsonIterator::jsonIterator() {
+    //
+    // }
+    //
+    //
+    //
+    // sJson::iterator sJson::begin() {
+    //     if (_parser->getAst().getType() == JsonType::Array)
+    //         return iterator();
+    //     return ;
+    // }
+
     sJson sJson::fromFile(const std::string &filePath) {
 #if __cplusplus >= 201703L
         const std::filesystem::path path(filePath);
@@ -46,12 +58,9 @@ namespace simpleJson {
         return sJson(jsonStr);
     }
 
-
     sJson::sJson(const std::string &jsonStr)
         : _lexer(new Lexer(jsonStr))
           , _parser(new Parser(*_lexer)) {
         _parser->parse();
     }
-    
-
 }

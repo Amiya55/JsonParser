@@ -64,25 +64,81 @@ namespace simpleJson {
     public:
         explicit JsonValue();
 
+        explicit JsonValue(int value);
+
+        explicit JsonValue(long value);
+
         explicit JsonValue(long long value);
+
+        explicit JsonValue(float value);
 
         explicit JsonValue(double value);
 
         explicit JsonValue(bool value);
 
-        explicit JsonValue(const std::string &value);
+        explicit JsonValue(std::string &value);
 
-        explicit JsonValue(const std::vector<JsonValue> &value);
+        explicit JsonValue(std::string &&value);
 
-        explicit JsonValue(const std::unordered_map<std::string, JsonValue> &value);
+        explicit JsonValue(const char *value);
 
-        JsonValue(const JsonValue &value);
+        explicit JsonValue(std::vector<JsonValue> &value);
+
+        explicit JsonValue(std::vector<JsonValue> &&value);
+
+        explicit JsonValue(std::unordered_map<std::string, JsonValue> &value);
+
+        explicit JsonValue(std::unordered_map<std::string, JsonValue> &&value);
+
 
         ~JsonValue();
 
-        JsonValue &operator=(const JsonValue &value);
+        JsonValue(const JsonValue &value) noexcept;
 
-        JsonType getType() const;
+        JsonValue &operator=(const JsonValue &value) noexcept;
+
+        JsonType getType() const noexcept;
+
+        long long &getInt();
+
+        double &getFloat();
+
+        bool &getBool();
+
+        std::string &getString();
+
+        std::vector<JsonValue> &getArray();
+
+        std::unordered_map<std::string, JsonValue> &getObject();
+
+        JsonValue &operator=(int val);
+
+        JsonValue &operator=(long val) noexcept;
+
+        JsonValue &operator=(long long val) noexcept;
+
+        JsonValue &operator=(float val) noexcept;
+
+        JsonValue &operator=(double val) noexcept;
+
+        JsonValue &operator=(bool val) noexcept;
+
+        JsonValue &operator=(std::string &val) noexcept;
+
+        JsonValue &operator=(std::string &&val) noexcept;
+
+        JsonValue &operator=(const char *val) noexcept;
+
+        JsonValue &operator=(std::vector<JsonValue> &val) noexcept;
+
+        JsonValue &operator=(std::vector<JsonValue> &&val) noexcept;
+
+        JsonValue &operator=(std::unordered_map<std::string, JsonValue> &val) noexcept;
+
+        JsonValue &operator=(std::unordered_map<std::string, JsonValue> &&val) noexcept;
+
+    private:
+        void _destory() noexcept;
     };
 #endif  // _cplusplus >= 201703L
 }
