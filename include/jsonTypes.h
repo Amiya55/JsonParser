@@ -46,12 +46,12 @@ namespace simpleJson {
 #else  // _cplusplus >= 201703L
     class JsonValue {
         JsonType _type;
-
+    public:
         union JsonData {
             std::unordered_map<std::string, JsonValue> _object;
             std::vector<JsonValue> _array;
             std::string _string;
-            long long _int;
+            long long _int{};
             double _float;
             bool _bool;
             std::nullptr_t _null;

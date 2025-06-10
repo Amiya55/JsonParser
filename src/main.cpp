@@ -22,40 +22,62 @@ std::string load_json() {
     return str;
 }
 
+// 测试，打印语法分析构建的ast
+void printAst(simpleJson::JsonValue val) {
+    switch (val.getType()) {
+        case simpleJson::JsonType::Int:
+            std::cout << val._data._int << std::endl;
+            break;
+        case simpleJson::JsonType::Float:
+            std::cout << val._data._float << std::endl;
+            break;
+        case simpleJson::JsonType::Bool:
+            std::cout << val._data._bool << std::endl;
+            break;
+        case simpleJson::JsonType::Null:
+            std::cout << "null" << std::endl;
+            break;
+        case simpleJson::JsonType::String:
+            std::cout << val._data._string << std::endl;
+            break;
+        case simpleJson::JsonType::Array:
+            std::cout << "[\n";
+            for (const auto& ele : val._data._array) {
+                printAst(ele);
+            }
+            std::cout << "]" << std::endl;
+            break;
+        case simpleJson::JsonType::Object:
+            std::cout << "{\n";
+            for (const auto& ele : val._data._object) {
+                std::cout << ele.first << " : ";
+                printAst(ele.second);
+            }
+            std::cout << "}" << std::endl;
+            break;
+        default:
+            ;
+    }
+}
+
+
 void read_from_json() {
     try {
-        // std::string jsonStr = load_json();
-        // trim(jsonStr);
-        // JsonSyntaxChecker().syntax_check(jsonStr, JsonValue::Type::Object);
-
-        // JsonFile jf;
-        // jf.open_json("data.json");
-
-        // std::string json("     null    , \n  null,  ggsh, null false");
-        // std::string json("     \"\\u4e00678\": \"   \\n\\\\t\"\n, \" hello,  ");
-        // std::string json("    12e23,\n  \\m123, 123\n 12.23e3  343e23");
         std::string json(load_json());
         // std::string json("\n\"s\": \"\",\n \"ok\":\"1\"");
         // std::string json("{\n\"hello\": true,\n \"null\":[null, false,]\n}");
         simpleJson::Lexer le(json);
-        // std::cout << json << std::endl;
         le.peekToken();
-        // std::cout << le.getTokens().size() << std::endl;
-        // for (int i = 0; i < le.getTokens().size(); i++) {
-        //     std::cout << le.getTokens()[i]._value << std::endl;
-        // }
+
         std::vector<std::string> ch;
-        // for (auto& e : le.getTokens()) {
-        //     std::cout << e._value << std::endl;
-        //     ch.push_back(e._value);
-        // }
 
         simpleJson::Parser pa(le);
         pa.parse();
 
+        simpleJson::JsonValue val(pa.getAst());
+        printAst(val);
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
-
     }
 }
 

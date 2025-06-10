@@ -340,6 +340,10 @@ namespace simpleJson {
         }
     }
 
+    const JsonValue &Parser::getAst() const noexcept {
+        return _ast;
+    }
+
     JsonValue Parser::_parseValue() {
         switch (_curToken.type()) {
             case TokenType::LBRACE:
