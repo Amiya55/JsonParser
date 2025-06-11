@@ -320,17 +320,18 @@ namespace simpleJson {
     Parser::Parser(const Lexer &lexer) noexcept
         : _lexer(lexer)
           , _curIndex(0)
-          , _curToken(_lexer.getTokens()[_curIndex]) {
+          , _curToken(_lexer.getTokens()[_curIndex])
+          , _ast(new JsonValue) {
     }
 
     void Parser::parse() {
         // json文件最顶层必须是[]或者{}
         switch (_curToken.type()) {
             case TokenType::LBRACE:
-                _ast = _parseObject();
+                *_ast = _parseObject();
                 break;
             case TokenType::LBRACKET:
-                _ast = _parseArray();
+                *_ast = _parseArray();
                 break;
             default: {
                 const std::string curValMsg("'" + _peek()._value + "'");
@@ -341,7 +342,7 @@ namespace simpleJson {
         }
     }
 
-    JsonValue &Parser::getAst() noexcept {
+    std::shared_ptr<JsonValue> Parser::getAst() noexcept {
         return _ast;
     }
 

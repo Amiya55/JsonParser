@@ -1,4 +1,5 @@
 #include "jsonTypes.h"
+#include <stdexcept>
 
 namespace simpleJson {
 #if __cplusplus >= 201703L
@@ -43,9 +44,9 @@ namespace simpleJson {
         // nothing to do
     }
 
-    JsonValue::JsonValue()
+    JsonValue::JsonValue(std::nullptr_t val)
         : _type(JsonType::Null) {
-        _data._null = nullptr;
+        _data._null = val;
     }
 
     JsonValue::JsonValue(int value)
@@ -111,6 +112,11 @@ namespace simpleJson {
     JsonValue::JsonValue(std::unordered_map<std::string, JsonValue> &&value)
         : _type(JsonType::Object) {
         new(&_data._object) std::unordered_map<std::string, JsonValue>(std::move(value));
+    }
+
+    JsonValue::JsonValue(const std::initializer_list<JsonValue> &value)
+        : _type(JsonType::Array) {
+        new(&_data._array) std::vector<JsonValue>(value);
     }
 
     JsonValue::JsonValue(const JsonValue &value) noexcept {
@@ -244,6 +250,15 @@ namespace simpleJson {
             throw std::runtime_error("json type is not object");
         }
         return _data._object;
+    }
+
+    JsonValue &JsonValue::operator=(std::nullptr_t val) {
+        _destroy();
+
+        _data._null = val;
+        _type = JsonType::Null;
+
+        return *this;
     }
 
     JsonValue &JsonValue::operator=(int val) {

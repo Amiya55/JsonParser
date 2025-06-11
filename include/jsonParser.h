@@ -75,7 +75,7 @@ namespace simpleJson {
         size_t _curIndex;
         Token _curToken;
 
-        JsonValue _ast; // 抽象语法树
+        std::shared_ptr<JsonValue> _ast; // 抽象语法树
 
     public:
         explicit Parser(const Lexer &lexer) noexcept;
@@ -89,7 +89,7 @@ namespace simpleJson {
         Parser &operator=(Parser &&other) = delete;
 
         void parse(); // 开始进行语法解析
-        JsonValue &getAst() noexcept;
+        std::shared_ptr<JsonValue> getAst() noexcept;
 
     private:
         JsonValue _parseValue(); // 解析json值
