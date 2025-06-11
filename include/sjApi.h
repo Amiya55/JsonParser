@@ -48,7 +48,6 @@ namespace simpleJson {
     private:
         explicit sJson(const std::string &jsonStr);
     };
-
 }
 
 

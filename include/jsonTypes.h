@@ -138,7 +138,7 @@ namespace simpleJson {
         JsonValue &operator=(std::unordered_map<std::string, JsonValue> &&val) noexcept;
 
     private:
-        void _destory() noexcept;
+        void _destroy() noexcept;
     };
 #endif  // _cplusplus >= 201703L
 }

@@ -142,7 +142,7 @@ namespace simpleJson {
         }
     }
 
-    void JsonValue::_destory() noexcept {
+    void JsonValue::_destroy() noexcept {
         switch (_type) {
             case JsonType::Object:
                 _data._object.~unordered_map();
@@ -161,7 +161,7 @@ namespace simpleJson {
 
 
     JsonValue::~JsonValue() {
-        _destory();
+        _destroy();
     }
 
     JsonValue &JsonValue::operator=(const JsonValue &value) noexcept {
@@ -247,7 +247,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(int val) {
-        _destory();
+        _destroy();
 
         _data._int = val;
         _type = JsonType::Int;
@@ -257,7 +257,7 @@ namespace simpleJson {
 
 
     JsonValue &JsonValue::operator=(long val) noexcept {
-        _destory();
+        _destroy();
 
         _data._int = val;
         _type = JsonType::Int;
@@ -267,7 +267,7 @@ namespace simpleJson {
 
 
     JsonValue &JsonValue::operator=(long long val) noexcept {
-        _destory();
+        _destroy();
 
         _data._int = val;
         _type = JsonType::Int;
@@ -276,7 +276,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(float val) noexcept {
-        _destory();
+        _destroy();
 
         _data._float = val;
         _type = JsonType::Float;
@@ -285,7 +285,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(double val) noexcept {
-        _destory();
+        _destroy();
 
         _data._float = val;
         _type = JsonType::Float;
@@ -294,7 +294,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(bool val) noexcept {
-        _destory();
+        _destroy();
 
         _data._bool = val;
         _type = JsonType::Bool;
@@ -303,7 +303,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::string &val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._string) std::string(val);
         _type = JsonType::String;
@@ -312,7 +312,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::string &&val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._string) std::string(std::move(val));
         _type = JsonType::String;
@@ -321,7 +321,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(const char *val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._string) std::string(val);
         _type = JsonType::String;
@@ -330,7 +330,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::vector<JsonValue> &val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._array) std::vector<JsonValue>(val);
         _type = JsonType::Array;
@@ -339,7 +339,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::vector<JsonValue> &&val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._array) std::vector<JsonValue>(std::move(val));
         _type = JsonType::Array;
@@ -348,7 +348,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::unordered_map<std::string, JsonValue> &val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._object) std::unordered_map<std::string, JsonValue>(val);
         _type = JsonType::Object;
@@ -357,7 +357,7 @@ namespace simpleJson {
     }
 
     JsonValue &JsonValue::operator=(std::unordered_map<std::string, JsonValue> &&val) noexcept {
-        _destory();
+        _destroy();
 
         new(&_data._object) std::unordered_map<std::string, JsonValue>(std::move(val));
         _type = JsonType::Object;
