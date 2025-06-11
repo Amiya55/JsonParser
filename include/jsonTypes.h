@@ -4,7 +4,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <cstddef>
+
+#include "config.h"
 
 #if __cplusplus >= 201703L
 #include <variant>
@@ -62,34 +63,36 @@ namespace simpleJson {
         } _data;
 
     public:
-        explicit JsonValue();
+        /* 为了支持{"hello world", 10, false, nullptr}这样的隐式类型转换，我们不加explicit */
+        JsonValue(std::nullptr_t value = nullptr);
 
-        explicit JsonValue(int value);
+        JsonValue(int value);
 
-        explicit JsonValue(long value);
+        JsonValue(long value);
 
-        explicit JsonValue(long long value);
+        JsonValue(long long value);
 
-        explicit JsonValue(float value);
+        JsonValue(float value);
 
-        explicit JsonValue(double value);
+        JsonValue(double value);
 
-        explicit JsonValue(bool value);
+        JsonValue(bool value);
 
-        explicit JsonValue(std::string &value);
+        JsonValue(std::string &value);
 
-        explicit JsonValue(std::string &&value);
+        JsonValue(std::string &&value);
 
-        explicit JsonValue(const char *value);
+        JsonValue(const char *value);
 
-        explicit JsonValue(std::vector<JsonValue> &value);
+        JsonValue(std::vector<JsonValue> &value);
 
-        explicit JsonValue(std::vector<JsonValue> &&value);
+        JsonValue(std::vector<JsonValue> &&value);
 
-        explicit JsonValue(std::unordered_map<std::string, JsonValue> &value);
+        JsonValue(std::unordered_map<std::string, JsonValue> &value);
 
-        explicit JsonValue(std::unordered_map<std::string, JsonValue> &&value);
+        JsonValue(std::unordered_map<std::string, JsonValue> &&value);
 
+        JsonValue(const std::initializer_list<JsonValue> &value);
 
         ~JsonValue();
 
@@ -110,6 +113,8 @@ namespace simpleJson {
         std::vector<JsonValue> &getArray();
 
         std::unordered_map<std::string, JsonValue> &getObject();
+
+        JsonValue &operator=(std::nullptr_t val);
 
         JsonValue &operator=(int val);
 

@@ -58,9 +58,40 @@ namespace simpleJson {
         return sJson(jsonStr);
     }
 
-    sJson::sJson(const std::string &jsonStr)
-        : _lexer(new Lexer(jsonStr))
-          , _parser(new Parser(*_lexer)) {
-        _parser->parse();
+    sJson sJson::array() {
+        return sJson("[]");
     }
+
+    sJson sJson::object() {
+        return sJson("{}");
+    }
+
+    void sJson::push_back(const std::initializer_list<JsonValue> &val) const {
+        _pushArr(JsonValue(val));
+    }
+
+    sJson::sJson(const std::string &jsonStr)
+        : _astRoot(nullptr)
+        , _astType() {
+        const Lexer lexer(jsonStr);
+        Parser parser(lexer);
+        parser.parse();
+
+        _astRoot = parser.getAst();
+        _astType = _astRoot->getType();
+    }
+
+    std::shared_ptr<JsonValue> sJson::getRoot() noexcept {
+        return _astRoot;
+    }
+
+    void sJson::_pushArr(JsonValue &&val) const {
+        if (_astType != JsonType::Array) {
+            throw std::logic_error("sJson::_pushArr only supports an array");
+        }
+
+        // 接受push_back传进来的通用引用，需要用完美转发而不是std::move
+        _astRoot->getArray().emplace_back(std::forward<JsonValue>(val));
+    }
+
 }

@@ -3,9 +3,12 @@
 /* !NOTE
  * 本文件为simpleJson库的一些开放接口
 */
-#include <string>
-
 #include "jsonParser.h"
+#include <string>
+#include <memory>
+#include <type_traits>
+#include "config.h"
+
 
 namespace simpleJson {
     class jsonIterator {
@@ -20,8 +23,8 @@ namespace simpleJson {
 
 
     class sJson {
-        std::unique_ptr<Lexer> _lexer;
-        std::unique_ptr<Parser> _parser;
+        std::shared_ptr<JsonValue> _astRoot;
+        JsonType _astType;
 
     public:
         using iterator = jsonIterator;
@@ -35,6 +38,10 @@ namespace simpleJson {
 
         static sJson fromStr(const std::string &jsonStr);
 
+        static sJson array();
+
+        static sJson object();
+
         explicit sJson(sJson &) = delete;
 
         sJson &operator=(sJson &) = delete;
@@ -45,8 +52,20 @@ namespace simpleJson {
 
         ~sJson() = default;
 
+        std::shared_ptr<JsonValue> getRoot() noexcept;
+
+        template<typename T, typename std::enable_if<
+            is_json_type<typename std::decay<T>::type>::value, int>::type = 0>
+        void push_back(T &&val) {
+            _pushArr(JsonValue(std::forward<T>(val)));
+        }
+
+        void push_back(const std::initializer_list<JsonValue> &val) const;
+
     private:
         explicit sJson(const std::string &jsonStr);
+
+        void _pushArr(JsonValue &&val) const;
     };
 }
 
