@@ -142,6 +142,16 @@ namespace simpleJson {
 
         JsonValue &operator=(std::unordered_map<std::string, JsonValue> &&val) noexcept;
 
+        void arrPush(JsonValue &val);
+
+        void arrPush(JsonValue &&val);
+
+        JsonValue &objPush(const std::pair<std::string, JsonValue> &val);
+
+        JsonValue &operator[](size_t index);
+
+        JsonValue &operator[](const std::string &key);
+
     private:
         void _destroy() noexcept;
     };

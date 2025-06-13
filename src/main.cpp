@@ -47,7 +47,7 @@ void printAst(simpleJson::JsonValue val) {
     }
 }
 
-std::string load_json(const std::string& path) {
+std::string load_json(const std::string &path) {
     std::fstream fs;
     fs.open(path, std::ios::in);
     if (!fs.is_open()) {
@@ -131,7 +131,7 @@ void jsonValueTest() {
 
 void testAst() {
     try {
-        std::string json = load_json("tmp.json");
+        std::string json = load_json("data.json");
 
         simpleJson::Lexer le(json);
         simpleJson::Parser pa(le);
@@ -152,15 +152,50 @@ void testSJson() {
     json.push_back(123.456);
     json.push_back(nullptr);
 
-    std::vector<simpleJson::JsonValue> v = {1,"hello world",false, nullptr};
+    std::vector<simpleJson::JsonValue> v = {1, "hello world", false, nullptr};
     json.push_back(v);
 
-    simpleJson::JsonValue jv({"hello world",false,nullptr});
+    simpleJson::JsonValue jv({"hello world", false, nullptr});
 
-    json.push_back({"Python", "C++", 123.456, {"hello world",false,nullptr}});
+    json.push_back({"Python", "C++", 123.456, {"hello world", false, nullptr}});
 
     printAst(*json.getRoot());
+}
 
+void createTest() {
+    try {
+        simpleJson::sJson json = simpleJson::sJson::object();
+        json.push_back(std::make_pair("hello world", 123.456));
+        std::cout << json["hello world"].getFloat() << std::endl;
+
+        json["hello world"] = "world";
+        std::cout << json["hello world"].getString() << std::endl;
+
+        json.push_back(std::make_pair<std::string, simpleJson::JsonValue>("arr", {nullptr, 123.456}));
+        printAst(*json.getRoot());
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+void loadTest() {
+    try {
+        simpleJson::sJson json = simpleJson::sJson::fromFile("tmp.json");
+        std::cout << json["obj"]["name"].getString() << std::endl;
+        std::cout << json["obj"]["age"].getInt() << std::endl;
+        std::cout << json["obj"]["gender"].getString() << std::endl;
+
+        json["hello"] = "world";
+        std::cout << json["hello"].getString() << std::endl;
+        printAst(*json.getRoot());
+
+        // "最令人讨厌的解析"语法陷阱，编译器会把下面这个构造解析成一个函数，为了避免歧义，我们需要加上额外的括号
+        simpleJson::JsonValue jv((std::unordered_map<std::string, simpleJson::JsonValue>()));
+        jv["hello world"] = 3.14;
+        std::cout << jv["hello world"].getFloat() << std::endl;
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
 }
 
 #endif
@@ -170,6 +205,8 @@ int main() {
     // apiTest();
     // jsonValueTest();
     // testAst();
-    testSJson();
+    // testSJson();
+    // createTest();
+    loadTest();
     return 0;
 }
