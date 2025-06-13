@@ -136,8 +136,9 @@ namespace simpleJson {
         size_t start = _column; // 当前字符串的起始位置
         ++_column; // 对_column加加，跳过左边的\"引号
         std::string token("\"");
-        size_t curQueStart = 0; // 当前转义序列起始位置(配合实现更精准的错误高亮打印)
 
+        size_t curQueStart = 0; // 当前转义序列起始位置(配合实现更精准的错误高亮打印)
+        bool rightQuotes = false;
         while (_column < _input[_line].size()) {
             if (_input[_line][_column] == '\"' && _input[_line][_column - 1] != '\\') {
                 /* 一旦遇到右边的\"引号，直接跳出循环 */

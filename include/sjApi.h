@@ -6,6 +6,7 @@
 #include "jsonParser.h"
 #include <string>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include "config.h"
 
@@ -57,15 +58,24 @@ namespace simpleJson {
         template<typename T, typename std::enable_if<
             is_json_type<typename std::decay<T>::type>::value, int>::type = 0>
         void push_back(T &&val) {
-            _pushArr(JsonValue(std::forward<T>(val)));
+            if (_astType != JsonType::Array) {
+                throw std::logic_error("sJson::_pushArr only supports an array");
+            }
+
+            _astRoot->getArray().emplace_back(std::forward<JsonValue>(JsonValue(val)));
         }
 
         void push_back(const std::initializer_list<JsonValue> &val) const;
 
+        // 向json对象添加键值对
+        JsonValue &push_back(const std::pair<std::string, JsonValue> &val);
+
+        JsonValue &operator[](size_t index);
+
+        JsonValue &operator[](const std::string &key);
+
     private:
         explicit sJson(const std::string &jsonStr);
-
-        void _pushArr(JsonValue &&val) const;
     };
 }
 

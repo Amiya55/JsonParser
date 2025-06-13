@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 #include "jsonTypes.h"
 
 namespace simpleJson {

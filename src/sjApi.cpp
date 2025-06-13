@@ -67,12 +67,51 @@ namespace simpleJson {
     }
 
     void sJson::push_back(const std::initializer_list<JsonValue> &val) const {
-        _pushArr(JsonValue(val));
+        if (_astType != JsonType::Array) {
+            throw std::logic_error("sJson::_pushArr only supports an array");
+        }
+
+        _astRoot->getArray().emplace_back(val);
+    }
+
+    JsonValue &sJson::push_back(const std::pair<std::string, JsonValue> &val) {
+        if (_astType != JsonType::Object) {
+            throw std::logic_error("sJson::_pushObj only supports an object ");
+        }
+
+        std::string jsonKey("\"" + val.first + "\"");
+        if (_astRoot->getObject().find(jsonKey) != _astRoot->getObject().end()) {
+            return _astRoot->getObject()[jsonKey];
+        }
+
+        _astRoot->getObject()[jsonKey] = val.second;
+        return _astRoot->getObject()[jsonKey];
+    }
+
+
+    JsonValue &sJson::operator[](size_t index) {
+        if (_astType != JsonType::Array) {
+            throw std::logic_error("json is not an array, cannot use number index");
+        }
+
+        if (index >= _astRoot->getArray().size()) {
+            throw std::out_of_range("index out of range");
+        }
+
+        return _astRoot->getArray()[index];
+    }
+
+    JsonValue &sJson::operator[](const std::string &key) {
+        if (_astType != JsonType::Object) {
+            throw std::logic_error("json is not an object , cannot use string key");
+        }
+
+        return push_back(std::make_pair<const std::string &, JsonValue>(key, nullptr));
     }
 
     sJson::sJson(const std::string &jsonStr)
         : _astRoot(nullptr)
-        , _astType() {
+          , _astType() {
         const Lexer lexer(jsonStr);
         Parser parser(lexer);
         parser.parse();
@@ -84,14 +123,4 @@ namespace simpleJson {
     std::shared_ptr<JsonValue> sJson::getRoot() noexcept {
         return _astRoot;
     }
-
-    void sJson::_pushArr(JsonValue &&val) const {
-        if (_astType != JsonType::Array) {
-            throw std::logic_error("sJson::_pushArr only supports an array");
-        }
-
-        // 接受push_back传进来的通用引用，需要用完美转发而不是std::move
-        _astRoot->getArray().emplace_back(std::forward<JsonValue>(val));
-    }
-
 }

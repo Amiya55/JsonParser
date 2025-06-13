@@ -380,5 +380,52 @@ namespace simpleJson {
         return *this;
     }
 
+    void JsonValue::arrPush(JsonValue &val) {
+        if (_type != JsonType::Array) {
+            throw std::logic_error("json type is not array");
+        }
+
+        _data._array.push_back(val);
+    }
+
+    void JsonValue::arrPush(JsonValue &&val) {
+        if (_type != JsonType::Array) {
+            throw std::logic_error("json type is not array");
+        }
+
+        _data._array.push_back(std::move(val));
+    }
+
+    JsonValue &JsonValue::objPush(const std::pair<std::string, JsonValue> &val) {
+        if (_type != JsonType::Object) {
+            throw std::logic_error("json type is not object");
+        }
+
+        std::string jsonKey("\"" + val.first + "\"");
+        if (_data._object.find(jsonKey) != _data._object.end()) {
+            return _data._object[jsonKey];
+        }
+
+        _data._object[jsonKey] = val.second;
+        return _data._object[jsonKey];
+    }
+
+
+    JsonValue &JsonValue::operator[](size_t index) {
+        if (_type != JsonType::Array) {
+            throw std::logic_error("json type is not array");
+        }
+
+        return _data._array[index];
+    }
+
+    JsonValue &JsonValue::operator[](const std::string &key){
+        if (_type != JsonType::Object) {
+            throw std::logic_error("json type is not object");
+        }
+
+        return objPush(std::make_pair<const std::string&, JsonValue>(key, nullptr));
+    }
+
 #endif  // _cplusplus >= 201703L
 }
