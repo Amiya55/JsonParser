@@ -38,6 +38,7 @@ cmake-build-debug/
 .idea/
 .cache/
 test/
+old/
 
 *.dSYM
 compile_commands.json
