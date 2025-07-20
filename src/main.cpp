@@ -70,13 +70,19 @@ void test_json_types3() {
 
     jValue jv7(nullptr);
 
-    std::cout << jv1 << std::endl;
-    std::cout << jv2 << std::endl;
-    std::cout << jv3 << std::endl;
-    std::cout << jv4 << std::endl;
-    std::cout << jv5 << std::endl;
-    std::cout << jv6 << std::endl;
-    std::cout << jv7 << std::endl;
+    // std::cout << jv1 << std::endl;
+    // std::cout << jv2 << std::endl;
+    // std::cout << jv3 << std::endl;
+    // std::cout << jv4 << std::endl;
+    // std::cout << jv5 << std::endl;
+    // std::cout << jv6 << std::endl;
+    // std::cout << jv7 << std::endl;
+
+    jValue jv8(std::move(jv6));
+    std::cout << jv8.getType() << std::endl;
+    jv8 = jv2;
+    std::cout << jv8.getType() << std::endl;
+
 }
 
 int main() {

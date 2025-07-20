@@ -10,21 +10,11 @@
 #include <variant>
 #include <vector>
 #include <initializer_list>
+#include <optional>
+
 #include "Config.h"
 
 namespace simpleJson {
-    class JsonValue;
-    template<typename T>
-    using enableIfJson =
-    std::enable_if_t<std::is_same_v<std::decay_t<T>, std::unordered_map<std::string, JsonValue> > ||
-                     std::is_same_v<std::decay_t<T>, std::vector<JsonValue> > ||
-                     std::is_same_v<std::decay_t<T>, std::string> ||
-                     std::is_same_v<std::decay_t<T>, const char *> ||
-                     std::is_same_v<std::decay_t<T>, bool> ||
-                     std::is_same_v<std::decay_t<T>, std::nullptr_t> ||
-                     std::is_floating_point_v<T> ||
-                     std::is_integral_v<T>>;
-
     // 明确json的数据类型有哪些
     enum class JsonType {
         Object,
@@ -35,6 +25,7 @@ namespace simpleJson {
         Bool,
         Null
     };
+    std::ostream &operator<<(std::ostream &os, const JsonType &type);
 
     class JsonValue {
         JsonType _curType; // 当前的json类型
@@ -99,6 +90,14 @@ namespace simpleJson {
             return *this;
         }
 
+        JsonValue() : _curType(JsonType::Null) , _curVal(nullptr) {}
+        ~JsonValue() = default;
+
+        JsonValue(const JsonValue& other)noexcept = default;
+        JsonValue(JsonValue&& other) noexcept = default;
+        JsonValue &operator=(const JsonValue &other) noexcept = default;
+        JsonValue &operator=(JsonValue &&other) noexcept = default;
+
         [[nodiscard]] static JsonValue makeArr(const std::initializer_list<JsonValue> arr) noexcept {
             return {std::vector<JsonValue>{arr}};
         }
@@ -135,36 +134,7 @@ namespace simpleJson {
                 return std::get<std::nullptr_t>(_curVal);
         }
 
-        friend std::ostream &operator<<(std::ostream &os, const JsonValue &val) {
-            // json对象和数组底层分别是哈希表和vector，这里我们就不打印出来了
-            const auto jsonObjectInfo = "Json Type: Json Object";
-            const auto jsonArrayInfo = "Json Type: Json Array";
-
-            switch (val._curType) {
-                case JsonType::Object:
-                    os << jsonObjectInfo;
-                    break;
-                case JsonType::Array:
-                    os << jsonArrayInfo;
-                    break;
-                case JsonType::String:
-                    os << std::get<std::string>(val._curVal);
-                    break;
-                case JsonType::Bool:
-                    os << std::get<bool>(val._curVal);
-                    break;
-                case JsonType::Int:
-                    os << std::get<long long>(val._curVal);
-                    break;
-                case JsonType::Float:
-                    os << std::get<long double>(val._curVal);
-                    break;
-                case JsonType::Null:
-                    os << std::get<std::nullptr_t>(val._curVal);
-                    break;
-            }
-            return os;
-        }
+        friend std::ostream &operator<<(std::ostream &os, const JsonValue &val);
     };
 } // namespace simpleJson
 
