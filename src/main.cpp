@@ -52,9 +52,37 @@ void test_json_types2() {
     }
 }
 
+void test_json_types3() {
+    jValue jv1("json");
+    jValue jv2(12.323);
+    jValue jv3(100);
+    jValue jv4 = jValue::makeArr({jv1, jv2, jv3});
+    jValue jv5 = jValue::makeObj({
+        {"first", 12},
+        {"second", nullptr},
+        {"third", jv4}
+    });
+
+    jValue jv6 = jValue::makeObj({
+        {"object", jv5},
+        {"array", jv4}
+    });
+
+    jValue jv7(nullptr);
+
+    std::cout << jv1 << std::endl;
+    std::cout << jv2 << std::endl;
+    std::cout << jv3 << std::endl;
+    std::cout << jv4 << std::endl;
+    std::cout << jv5 << std::endl;
+    std::cout << jv6 << std::endl;
+    std::cout << jv7 << std::endl;
+}
+
 int main() {
     // std::cout << "hello JsonParser!" << std::endl;
     // test_json_types1();
-    test_json_types2();
+    // test_json_types2();
+    test_json_types3();
     return 0;
 }
