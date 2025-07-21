@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "JsonTypes.h"
+#include "Utilities.h"
 
 using jValue = simpleJson::JsonValue;
 using jType = simpleJson::JsonType;
@@ -82,13 +83,27 @@ void test_json_types3() {
     std::cout << jv8.getType() << std::endl;
     jv8 = jv2;
     std::cout << jv8.getType() << std::endl;
+}
 
+void convert_unicode_test() {
+    // try {
+    //     std::string str("9f000");
+    //     unsigned int result = std::stoul(str, nullptr, 16);
+    //     std::cout << result << std::endl;
+    // } catch (std::exception &e) {
+    //     std::cerr << e.what() << std::endl;
+    // }
+
+    std::string str("\\u4e00我知道这是\\uge中文字符\\u9fa5");
+    std::string ret = simpleJson::convert_unicode_escape(str);
+    std::cout << ret << std::endl;
 }
 
 int main() {
     // std::cout << "hello JsonParser!" << std::endl;
     // test_json_types1();
     // test_json_types2();
-    test_json_types3();
+    // test_json_types3();
+    convert_unicode_test();
     return 0;
 }

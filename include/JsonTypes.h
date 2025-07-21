@@ -17,12 +17,8 @@
 namespace simpleJson {
     // 明确json的数据类型有哪些
     enum class JsonType {
-        Object,
-        Array,
-        String,
-        Int,
-        Float,
-        Bool,
+        Object, Array, String,
+        Int, Float, Bool,
         Null
     };
     std::ostream &operator<<(std::ostream &os, const JsonType &type);
