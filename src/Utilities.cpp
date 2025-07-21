@@ -25,10 +25,7 @@ namespace simpleJson {
 
         return result;
     }
-
-    unsigned int str_to_uint(const std::string &str, int base = 10) {
-    }
-
+    
     std::string convert_unicode_escape(const std::string &escape) noexcept {
         std::string result;
         result.reserve(escape.length());
