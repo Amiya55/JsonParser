@@ -1,5 +1,4 @@
-#include "Utilities.h"
-#include <array>
+#include "utilities.h"
 #include <stdexcept>
 
 namespace simpleJson {
@@ -25,7 +24,7 @@ namespace simpleJson {
 
         return result;
     }
-    
+
     std::string convert_unicode_escape(const std::string &escape) noexcept {
         std::string result;
         result.reserve(escape.length());

@@ -12,7 +12,7 @@
 #include <initializer_list>
 #include <optional>
 
-#include "Config.h"
+#include "config.h"
 
 namespace simpleJson {
     // 明确json的数据类型有哪些

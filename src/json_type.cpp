@@ -1,4 +1,4 @@
-#include "JsonTypes.h"
+#include "json_type.h"
 #include <iostream>
 
 namespace simpleJson {

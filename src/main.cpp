@@ -1,8 +1,8 @@
 #include <exception>
 #include <iostream>
 
-#include "JsonTypes.h"
-#include "Utilities.h"
+#include "json_type.h"
+#include "utilities.h"
 
 using jValue = simpleJson::JsonValue;
 using jType = simpleJson::JsonType;
