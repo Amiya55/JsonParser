@@ -89,6 +89,10 @@ namespace simpleJson {
         return _curIndex == _data.source.length();
     }
 
+    char Lexer::_current() const noexcept {
+        return _data.source[_curIndex];
+    }
+
     char Lexer::_peek() const noexcept {
         if (!_isAtEnd()) {
             return _data.source[_curIndex + 1];
@@ -116,5 +120,111 @@ namespace simpleJson {
     }
 
     bool Lexer::_parseLiteral(std::string &returnToken, TokenType &type) {
+        DfaStat curStat;
+        if (const char ch = _current(); ch == 't') {
+            type = TokenType::TRUE;
+            curStat = DfaStat::TrueT;
+            returnToken.push_back('t');
+        } else if (ch == 'f') {
+            type = TokenType::FALSE;
+            curStat = DfaStat::FalseF;
+            returnToken.push_back('f');
+        } else if (ch == 'n') {
+            type = TokenType::NULL_;
+            curStat = DfaStat::NullN;
+            returnToken.push_back('n');
+        } else {
+            return false;
+        }
+
+        while (true) {
+            switch (curStat) {
+                case DfaStat::TrueT:
+                    if (_peek() == 'r') _advance();
+                    else return false;
+                    curStat = DfaStat::TrueR;
+                    returnToken.push_back('r');
+                    break;
+                case DfaStat::TrueR:
+                    if (_peek() == 'u') _advance();
+                    else return false;
+                    curStat = DfaStat::TrueU;
+                    returnToken.push_back('u');
+                    break;
+                case DfaStat::TrueU:
+                    if (_peek() == 'e') _advance();
+                    else return false;
+                    curStat = DfaStat::TrueE;
+                    returnToken.push_back('e');
+                    break;
+                case DfaStat::TrueE: {
+                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
+                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                        _advance();
+                        return true;
+                    }
+                    return false;
+                }
+
+                case DfaStat::FalseF:
+                    if (_peek() == 'a') _advance();
+                    else return false;
+                    curStat = DfaStat::FalseA;
+                    returnToken.push_back('a');
+                    break;
+                case DfaStat::FalseA:
+                    if (_peek() == 'l') _advance();
+                    else return false;
+                    curStat = DfaStat::FalseL;
+                    returnToken.push_back('l');
+                    break;
+                case DfaStat::FalseL:
+                    if (_peek() == 's') _advance();
+                    else return false;
+                    curStat = DfaStat::FalseS;
+                    returnToken.push_back('s');
+                    break;
+                case DfaStat::FalseS:
+                    if (_peek() == 'e') _advance();
+                    else return false;
+                    curStat = DfaStat::FalseE;
+                    returnToken.push_back('e');
+                    break;
+                case DfaStat::FalseE: {
+                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
+                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                        _advance();
+                        return true;
+                    }
+                    return false;
+                }
+
+                case DfaStat::NullN:
+                    if (_peek() == 'u') _advance();
+                    else return false;
+                    curStat = DfaStat::NullU;
+                    returnToken.push_back('u');
+                    break;
+                case DfaStat::NullU:
+                    if (_peek() == 'l') _advance();
+                    else return false;
+                    curStat = DfaStat::NullL1;
+                    returnToken.push_back('l');
+                    break;
+                case DfaStat::NullL1:
+                    if (_peek() == 'l') _advance();
+                    else return false;
+                    curStat = DfaStat::NullL2;
+                    returnToken.push_back('l');
+                    break;
+                case DfaStat::NullL2:
+                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
+                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                        _advance();
+                        return true;
+                    }
+                    return false;
+            }
+        }
     }
 }

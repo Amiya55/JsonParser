@@ -51,7 +51,7 @@ namespace simpleJson {
 
     private:
         // Dfa基本状态
-        enum DfaStat {
+        enum class DfaStat {
             Start, Done, Error,
 
             InString, StringEscape,
@@ -72,6 +72,7 @@ namespace simpleJson {
 
         void _scan();
         [[nodiscard]] bool _isAtEnd() const noexcept;
+        [[nodiscard]] char _current() const noexcept;
         [[nodiscard]] char _peek() const noexcept;
         char _advance() noexcept;
         [[nodiscard]] Token _makeToken(std::string&& str, TokenType type) const noexcept;
