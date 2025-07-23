@@ -1,5 +1,5 @@
 #include "lexer_parser.h"
-
+#include "utilities.h"
 #include "json_type.h"
 
 namespace simpleJson {
@@ -89,6 +89,13 @@ namespace simpleJson {
         return _curIndex == _data.source.length();
     }
 
+    char Lexer::_prev() const noexcept {
+        if (_curIndex > 0) {
+            return _data.source[_curIndex - 1];
+        }
+        return '\0';
+    }
+
     char Lexer::_current() const noexcept {
         return _data.source[_curIndex];
     }
@@ -114,6 +121,75 @@ namespace simpleJson {
 
 
     bool Lexer::_parseString(std::string &returnToken) {
+        DfaStat curStat;
+        bool hasUnicodeEscape = false; // 如果存在unicode转义序列，需要进行向utf8的转换
+        if (const char ch = _current(); ch == '\"') {
+            curStat = DfaStat::InString;
+            _advance();
+        } else {
+            return false;
+        }
+
+        while (true) {
+            switch (curStat) {
+                case DfaStat::InString:
+                    if (_current() == '\"' && _prev() != '\\') {
+                        returnToken.push_back(_current());
+                        curStat = DfaStat::EndString;
+                        _advance();
+                        break;
+                    }
+
+                    if (_current() == '\\') {
+                        switch (_peek()) {
+                            case 'u':
+                                hasUnicodeEscape = true;
+                                curStat = DfaStat::StringEscape;
+                            case '/':
+                                _advance();
+                                break;
+                            case '\\':
+                            case '\"':
+                            case 'n':
+                            case 't':
+                            case 'b':
+                            case 'f':
+                            case 'r':
+                                returnToken.push_back('\\');
+                                _advance();
+                                break;
+                            default:
+                                return false;
+                        }
+                    }
+                    returnToken.push_back(_current());
+                    break;
+                case DfaStat::StringEscape: {
+                    constexpr int unicodeEscapeLen = 4; // unicode转义序列字符数为4，例如\u4e00
+                    for (int i = 0; i < unicodeEscapeLen; ++i) {
+                        if (std::isdigit(_current()) ||
+                            (_current() >= 'a' && _current() <= 'f') ||
+                            (_current() >= 'A' && _current() <= 'F')) {
+                            returnToken.push_back(_current());
+                            _advance();
+                        } else {
+                            return false;
+                        }
+                    }
+                    curStat = DfaStat::InString;
+                    break;
+                }
+                case DfaStat::EndString:
+                    if (const char ch = _peek(); std::isspace(ch) || ch == '\0' ||
+                        ch == ',' || ch == ':' || ch == ']' || ch == '}') {
+                        _advance();
+                        if (hasUnicodeEscape)
+                            returnToken = convert_unicode_escape(returnToken);
+                        return true;
+                    }
+                    return false;
+            }
+        }
     }
 
     bool Lexer::_parseNumber(std::string &returnToken) {

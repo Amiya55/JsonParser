@@ -54,7 +54,7 @@ namespace simpleJson {
         enum class DfaStat {
             Start, Done, Error,
 
-            InString, StringEscape,
+            InString, StringEscape, EndString,
 
             NumberSign, NumberZero, NumberIntegral, NumberFractionBegin, NumberFraction,
             NumberExponentBegin, NumberExponentSign, NumberExponent,
@@ -72,6 +72,7 @@ namespace simpleJson {
 
         void _scan();
         [[nodiscard]] bool _isAtEnd() const noexcept;
+        [[nodiscard]] char _prev() const noexcept;
         [[nodiscard]] char _current() const noexcept;
         [[nodiscard]] char _peek() const noexcept;
         char _advance() noexcept;

@@ -94,7 +94,7 @@ void convert_unicode_test() {
     //     std::cerr << e.what() << std::endl;
     // }
 
-    std::string str("\\u4e00我知道这是\\uge中文字符\\u9fa5");
+    std::string str("https://\\u4e00我知道这是\\uge中文字符\\u9fa5");
     std::string ret = simpleJson::convert_unicode_escape(str);
     std::cout << ret << std::endl;
 }
