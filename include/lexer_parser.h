@@ -9,7 +9,8 @@
 namespace simpleJson {
     enum class TokenType {
         LBRACE, RBRACE, LBRACKET, RBRACKET,
-        STR, NUM, COMMA, COLON, NULL_
+        STR, NUM, COMMA, COLON,
+        TRUE, FALSE, NULL_
     };
 
     struct Token {
@@ -70,11 +71,9 @@ namespace simpleJson {
 
         void _scan();
         // 以下函数都是_scan函数的子模块
-        POS_T _parseObject(); // 解析json对象
-        POS_T _parseArray(); // 解析json数组
-        POS_T _parseString(); // 解析json字符串
-        POS_T _parseNumber(); // 解析json数字
-        POS_T _parseLiteral(); // 解析json字面量(true, false, null)
+        POS_T _parseString(std::string& returnToken); // 解析json字符串
+        POS_T _parseNumber(std::string& returnToken); // 解析json数字
+        POS_T _parseLiteral(std::string& returnToken); // 解析json字面量(true, false, null)
     };
 }
 
