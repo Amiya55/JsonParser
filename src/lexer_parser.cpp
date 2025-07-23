@@ -3,58 +3,43 @@
 #include "json_type.h"
 
 namespace simpleJson {
-    POS_T _curIndex{0}; // 当前在原始json字符串中的索引
-    POS_T _curRow{0}; // 当前字符行
-    POS_T _curCol{0}; // 当前字符列
-
     void Lexer::_scan() {
         for (_curIndex = 0; _curIndex < _data.source.length();) {
             switch (_data.source[_curIndex]) {
                 case '{':
-                    _data.tokens.push_back({
-                        "{", TokenType::LBRACE, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken("{", TokenType::LBRACE));
+                    _advance();
                     break;
                 case '}':
-                    _data.tokens.push_back({
-                        "}", TokenType::RBRACE, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken("{", TokenType::RBRACE));
+                    _advance();
                     break;
                 case '[':
-                    _data.tokens.push_back({
-                        "[", TokenType::LBRACKET, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET));
+                    _advance();
                     break;
                 case ']':
-                    _data.tokens.push_back({
-                        "]", TokenType::RBRACKET, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET));
+                    _advance();
                     break;
                 case ',':
-                    _data.tokens.push_back({
-                        ",", TokenType::COMMA, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken(",", TokenType::COMMA));
+                    _advance();
                     break;
                 case ':':
-                    _data.tokens.push_back({
-                        ":", TokenType::COLON, _curRow, _curCol, 1
-                    });
+                    _data.tokens.push_back(_makeToken(":", TokenType::COLON));
+                    _advance();
                     break;
                 case '\"': {
-                    std::string returnToken;
-                    if (POS_T skipLen = _parseString(returnToken) != POS_OVERGLOW) {
-                        const POS_T tokenLen = returnToken.length();
-                        _data.tokens.push_back({
-                            std::move(returnToken), TokenType::STR, _curRow, _curCol, tokenLen
-                        });
-                        _curIndex += tokenLen;
-                        _curCol += tokenLen;
+                    if (std::string returnToken; _parseString(returnToken)) {
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR));
                     } else {
                         // ...处理错误
                     }
                 }
-                    break;
+                break;
                 case '-':
+                case '0':
                 case '1':
                 case '2':
                 case '3':
@@ -64,51 +49,72 @@ namespace simpleJson {
                 case '7':
                 case '8':
                 case '9': {
-                    std::string returnToken;
-                    if (POS_T ret = _parseNumber(returnToken) == POS_OVERGLOW) {
-                        const POS_T tokenLen = returnToken.length();
-                        _data.tokens.push_back({
-                            std::move(returnToken), TokenType::NUM, _curRow, _curCol, tokenLen
-                        });
-                        _curIndex += tokenLen;
-                        _curCol += tokenLen;
+                    if (std::string returnToken; _parseNumber(returnToken)) {
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM));
                     } else {
                         // ...处理错误
                     }
-                }
                     break;
+                }
                 case 't':
                 case 'f':
                 case 'n': {
                     std::string returnToken;
-                    if (POS_T ret = _parseLiteral(returnToken) == POS_OVERGLOW) {
-                        const POS_T tokenLen = returnToken.length();
-                        _data.tokens.push_back({
-                            std::move(returnToken), ? , _curRow, _curCol, tokenLen
-                        });
+                    TokenType type;
+                    if (_parseLiteral(returnToken, type)) {
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), type));
                     } else {
                         // ...处理错误
                     }
-                }
                     break;
+                }
                 case '\n':
-                    ++_curIndex;
-                    _data.linesIndex.push_back(_curIndex);
+                    // 额外添加分支处理换行符记录，这样不用在一开始将原始json字符串拆分，性能更好
                     ++_curRow;
                     _curCol = 0;
+                    _data.linesIndex.push_back(_curIndex);
+                    _advance();
                     break;
                 default:
-
+                    if (std::isspace(_data.source[_curIndex])) {
+                        _advance();
+                    } else {
+                        // ...处理错误
+                    }
             }
         }
     }
 
-    POS_T Lexer::_parseString(std::string &returnToken) {
+    bool Lexer::_isAtEnd() const noexcept {
+        return _curIndex == _data.source.length();
     }
 
-    POS_T Lexer::_parseNumber(std::string &returnToken) {
+    char Lexer::_peek() const noexcept {
+        if (!_isAtEnd()) {
+            return _data.source[_curIndex + 1];
+        }
+        return '\0';
     }
 
-    POS_T Lexer::_parseLiteral(std::string &returnToken) {
+    char Lexer::_advance() noexcept {
+        if (!_isAtEnd()) {
+            ++_curCol;
+            return _data.source[++_curIndex];
+        }
+        return '\0';
+    }
+
+    Token Lexer::_makeToken(std::string &&str, TokenType type) const noexcept {
+        return {std::move(str), type, _curRow, _curCol, str.length()};
+    }
+
+
+    bool Lexer::_parseString(std::string &returnToken) {
+    }
+
+    bool Lexer::_parseNumber(std::string &returnToken) {
+    }
+
+    bool Lexer::_parseLiteral(std::string &returnToken, TokenType &type) {
     }
 }

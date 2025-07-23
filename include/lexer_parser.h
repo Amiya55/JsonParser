@@ -50,9 +50,6 @@ namespace simpleJson {
         Lexer& operator=(Lexer&&) = delete;
 
     private:
-        // 位置溢出，用于判断_scan函数的子模块是否解析失败
-        constexpr static POS_T POS_OVERGLOW = static_cast<POS_T>(-1);
-
         // Dfa基本状态
         enum DfaStat {
             Start, Done, Error,
@@ -69,11 +66,20 @@ namespace simpleJson {
             NullN, NullU, NullL1, NullL2
         };
 
+        POS_T _curIndex{0}; // 当前在原始json字符串中的索引
+        POS_T _curRow{0}; // 当前字符行
+        POS_T _curCol{0}; // 当前字符列
+
         void _scan();
+        [[nodiscard]] bool _isAtEnd() const noexcept;
+        [[nodiscard]] char _peek() const noexcept;
+        char _advance() noexcept;
+        [[nodiscard]] Token _makeToken(std::string&& str, TokenType type) const noexcept;
+
         // 以下函数都是_scan函数的子模块
-        POS_T _parseString(std::string& returnToken); // 解析json字符串
-        POS_T _parseNumber(std::string& returnToken); // 解析json数字
-        POS_T _parseLiteral(std::string& returnToken); // 解析json字面量(true, false, null)
+        bool _parseString(std::string& returnToken); // 解析json字符串
+        bool _parseNumber(std::string& returnToken); // 解析json数字
+        bool _parseLiteral(std::string& returnToken, TokenType& type); // 解析json字面量(true, false, null)
     };
 }
 

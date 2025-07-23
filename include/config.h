@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <unordered_map>
+#include <type_traits>
+
 namespace simpleJson {
 #define ERR_TYPE_MISMATCH "The type mismatch occured "  // 错误提示：类型不匹配
 
