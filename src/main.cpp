@@ -116,6 +116,24 @@ void lexer_test() {
     simpleJson::Lexer lexer(jsonStr);
 }
 
+void errMsgs_test() {
+    try {
+        simpleJson::ErrMsgs errMsgs;
+
+        std::string line1("  \"unicode\": \"\\u4e00\\u9fa5\\u1000\\uffff\"\n");
+        std::string line2("  \"number\": 0123,\n");
+        std::string line3("  \"flag\": true\n");
+        simpleJson::Token token{"0123", simpleJson::TokenType::NUM, 1, 13, 4};
+
+        errMsgs.addError(std::move(line1), std::move(line2),
+            std::move(line3), "No such number", std::move(token));
+
+        errMsgs.throwError();
+    } catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
 int main() {
 #ifdef _WIN32
     SetConsoleOutputCP(65001);
@@ -125,6 +143,7 @@ int main() {
     // test_json_types2();
     // test_json_types3();
     // convert_unicode_test();
-    lexer_test();
+    // lexer_test();
+    errMsgs_test();
     return 0;
 }

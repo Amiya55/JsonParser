@@ -8,7 +8,7 @@ namespace simpleJson {
         return !_messages.empty();
     }
 
-    void ErrMsgs::addError(std::string &&curLine, std::string &&prevLine,
+    void ErrMsgs::addError(std::string &&prevLine, std::string &&curLine,
                            std::string &&nextLine, std::string &&errDesc, Token &&errToken) {
         _messages.push_back({
             std::move(curLine), std::move(prevLine), std::move(nextLine),
@@ -21,7 +21,7 @@ namespace simpleJson {
             return;
 
         std::string errorPrintInfo;
-        for (size_t i = 0; i < throwAll ? _messages.size() : 1; i++) {
+        for (size_t i = 0; i < 1; i++) {
             const POS_T errLineIndex = _messages[i].errToken.row + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
             // 打印错误所在行上文
             if (!_messages[i].prevLine.empty()) {
@@ -30,15 +30,16 @@ namespace simpleJson {
             }
 
             // 构建错误所在行信息
-            std::string LineInfo(std::to_string(errLineIndex) + " | " + _messages[i].errDesc);
+            std::string LineInfo(std::to_string(errLineIndex) + " | " + _messages[i].currentLine);
+            errorPrintInfo.append(LineInfo);
             // 构建空格缩进
-            std::string indent(std::to_string(errLineIndex).length() + 3 + _messages[i].errToken.col, ' ');
+            std::string indent(std::to_string(errLineIndex).length() + 3 + _messages[i].errToken.col - 1, ' ');
             errorPrintInfo.append(indent);
             // 高亮错误token
             std::string highlight(_messages[i].errToken.len, '~');
             errorPrintInfo.append(highlight);
             // 添加错误描述
-            errorPrintInfo.append(_messages[i].errDesc + "\n");
+            errorPrintInfo.append(" " + _messages[i].errDesc + "\n");
 
             // 打印错误所在行下文
             if (!_messages[i].nextLine.empty()) {
@@ -47,8 +48,10 @@ namespace simpleJson {
             }
 
             // 构建分隔符
-            errorPrintInfo.append("\n- - - - - - - - - - -\n");
+            errorPrintInfo.append("- - - - - - - - - - -\n");
         }
+
+        throw std::runtime_error(errorPrintInfo);
     }
 
 

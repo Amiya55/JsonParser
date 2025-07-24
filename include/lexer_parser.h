@@ -56,7 +56,7 @@ namespace simpleJson {
         ErrMsgs& operator=(ErrMsgs&&) = delete;
 
         [[nodiscard]] bool hasError() const noexcept;
-        void addError(std::string &&curLine, std::string &&prevLine,
+        void addError(std::string &&prevLine, std::string &&curLine,
                       std::string &&nextLine, std::string &&errDesc, Token &&errToken);
 
         void throwError(bool throwAll = false) const;
