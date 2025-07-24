@@ -2,7 +2,12 @@
 #include <iostream>
 
 #include "json_type.h"
+#include "lexer_parser.h"
 #include "utilities.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using jValue = simpleJson::JsonValue;
 using jType = simpleJson::JsonType;
@@ -99,11 +104,27 @@ void convert_unicode_test() {
     std::cout << ret << std::endl;
 }
 
+void lexer_test() {
+    // std::string jsonStr("nUll");
+    // simpleJson::Lexer lexer(jsonStr);
+
+    // std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9fa5\\u4f00\"");
+    // std::string jsonStr(R"("\u4e00\u9fa5\u4f00")");
+    // simpleJson::Lexer lexer(jsonStr);
+
+    std::string jsonStr("06.2");
+    simpleJson::Lexer lexer(jsonStr);
+}
+
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(65001);
+#endif
     // std::cout << "hello JsonParser!" << std::endl;
     // test_json_types1();
     // test_json_types2();
     // test_json_types3();
-    convert_unicode_test();
+    // convert_unicode_test();
+    lexer_test();
     return 0;
 }

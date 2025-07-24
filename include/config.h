@@ -5,10 +5,18 @@
 #include <type_traits>
 
 namespace simpleJson {
+#ifndef ERR_TYPES
+#define ERR_TYPES
 #define ERR_TYPE_MISMATCH "The type mismatch occured "  // 错误提示：类型不匹配
+#endif
 
+#ifndef POS_T
 #define POS_T unsigned long long  // 关于某个token定位的数据类型
+#endif
+
+#ifndef LENGTH_T
 #define LENGTH_T unsigned long long  // 某个Token的长度的类型(Token长度以字符数为准)
+#endif
 
     // 只允许与json有关的数据类型
     class JsonValue;

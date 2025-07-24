@@ -1,6 +1,7 @@
 #include "lexer_parser.h"
 #include "utilities.h"
 #include "json_type.h"
+#include <iostream>
 
 namespace simpleJson {
     void Lexer::_scan() {
@@ -32,8 +33,10 @@ namespace simpleJson {
                     break;
                 case '\"': {
                     if (std::string returnToken; _parseString(returnToken)) {
+                        std::cout << returnToken << std::endl;
                         _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR));
                     } else {
+                        std::cout << "error occurred!\n";
                         // ...处理错误
                     }
                 }
@@ -50,8 +53,11 @@ namespace simpleJson {
                 case '8':
                 case '9': {
                     if (std::string returnToken; _parseNumber(returnToken)) {
+                        std::cout << returnToken << std::endl;
                         _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM));
                     } else {
+                        std::cout << "error occurred! parsing number\n";
+                        return;
                         // ...处理错误
                     }
                     break;
@@ -64,6 +70,7 @@ namespace simpleJson {
                     if (_parseLiteral(returnToken, type)) {
                         _data.tokens.push_back(_makeToken(std::move(returnToken), type));
                     } else {
+                        std::cout << "出错了，json不支持此类令牌" << std::endl;
                         // ...处理错误
                     }
                     break;
@@ -84,6 +91,13 @@ namespace simpleJson {
             }
         }
     }
+
+    bool Lexer::_dfaDone(char curChar) const noexcept {
+        return !_isAtEnd() && (std::isspace(curChar) ||
+               curChar == ']' || curChar == '\0' ||
+               curChar == '}' || curChar == ',');
+    }
+
 
     bool Lexer::_isAtEnd() const noexcept {
         return _curIndex == _data.source.length();
@@ -116,7 +130,8 @@ namespace simpleJson {
     }
 
     Token Lexer::_makeToken(std::string &&str, TokenType type) const noexcept {
-        return {std::move(str), type, _curRow, _curCol, str.length()};
+        const LENGTH_T tokenLen = str.length();
+        return {std::move(str), type, _curRow, _curCol, tokenLen};
     }
 
 
@@ -134,20 +149,18 @@ namespace simpleJson {
             switch (curStat) {
                 case DfaStat::InString:
                     if (_current() == '\"' && _prev() != '\\') {
-                        returnToken.push_back(_current());
                         curStat = DfaStat::EndString;
-                        _advance();
                         break;
                     }
 
                     if (_current() == '\\') {
                         switch (_peek()) {
-                            case 'u':
-                                hasUnicodeEscape = true;
-                                curStat = DfaStat::StringEscape;
                             case '/':
                                 _advance();
                                 break;
+                            case 'u':
+                                hasUnicodeEscape = true;
+                                curStat = DfaStat::StringEscape;
                             case '\\':
                             case '\"':
                             case 'n':
@@ -163,6 +176,7 @@ namespace simpleJson {
                         }
                     }
                     returnToken.push_back(_current());
+                    _advance();
                     break;
                 case DfaStat::StringEscape: {
                     constexpr int unicodeEscapeLen = 4; // unicode转义序列字符数为4，例如\u4e00
@@ -180,8 +194,7 @@ namespace simpleJson {
                     break;
                 }
                 case DfaStat::EndString:
-                    if (const char ch = _peek(); std::isspace(ch) || ch == '\0' ||
-                        ch == ',' || ch == ':' || ch == ']' || ch == '}') {
+                    if (const char nextChar = _peek(); _dfaDone(nextChar) || nextChar == ':') {
                         _advance();
                         if (hasUnicodeEscape)
                             returnToken = convert_unicode_escape(returnToken);
@@ -193,6 +206,118 @@ namespace simpleJson {
     }
 
     bool Lexer::_parseNumber(std::string &returnToken) {
+        DfaStat curStat;
+        if (const char ch = _current(); ch == '-') {
+            curStat = DfaStat::NumberSign;
+        } else if (ch == '0') {
+            curStat = DfaStat::NumberZero;
+        } else if (std::isdigit(ch)) {
+            curStat = DfaStat::NumberIntegral;
+        } else {
+            return false;
+        }
+
+        while (true) {
+            switch (curStat) {
+                case DfaStat::NumberSign:
+                    if (std::isdigit(_peek()))
+                        curStat = DfaStat::NumberIntegral;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberZero:
+                    if (const char nextChar = _peek(); nextChar == '.')
+                        curStat = DfaStat::NumberFractionBegin;
+                    else if (nextChar == 'e')
+                        curStat = DfaStat::NumberExponentBegin;
+                    else if (_dfaDone(nextChar))
+                        curStat = DfaStat::NumberEnd;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberIntegral:
+                    if (const char nextChar = _peek(); nextChar == '.') {
+                        curStat = DfaStat::NumberFractionBegin;
+                    }
+                    else if (nextChar == 'e') {
+                        curStat = DfaStat::NumberExponentBegin;
+                    }
+                    else if (_dfaDone(nextChar)) {
+                        curStat = DfaStat::NumberEnd;
+                    }
+                    else {
+                        if (!std::isdigit(nextChar))
+                            return false;
+                    }
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberFractionBegin:
+                    if (const char nextChar = _peek(); std::isdigit(nextChar))
+                        curStat = DfaStat::NumberFraction;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberFraction:
+                    if (const char nextChar = _peek(); nextChar == 'e') {
+                        curStat = DfaStat::NumberExponentBegin;
+                    }
+                    else if (_dfaDone(nextChar)) {
+                        curStat = DfaStat::NumberEnd;
+                    }
+                    else {
+                        if (!std::isdigit(nextChar))
+                            return false;
+                    }
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberExponentBegin:
+                    if (const char nextChar = _peek(); nextChar == '-')
+                        curStat = DfaStat::NumberExponentSign;
+                    else if (std::isdigit(nextChar))
+                        curStat = DfaStat::NumberExponent;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberExponentSign:
+                    if (const char nextChar = _peek(); std::isdigit(nextChar))
+                        curStat = DfaStat::NumberExponent;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberExponent:
+                    if (const char nextChar = _peek(); std::isdigit(nextChar))
+                        curStat = DfaStat::NumberExponent;
+                    else if (_dfaDone(nextChar))
+                        curStat = DfaStat::NumberEnd;
+                    else
+                        return false;
+
+                    returnToken.push_back(_current());
+                    _advance();
+                    break;
+                case DfaStat::NumberEnd:
+                    return true;
+            }
+        }
     }
 
     bool Lexer::_parseLiteral(std::string &returnToken, TokenType &type) {
@@ -234,8 +359,7 @@ namespace simpleJson {
                     returnToken.push_back('e');
                     break;
                 case DfaStat::TrueE: {
-                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
-                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
                         _advance();
                         return true;
                     }
@@ -267,8 +391,7 @@ namespace simpleJson {
                     returnToken.push_back('e');
                     break;
                 case DfaStat::FalseE: {
-                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
-                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
                         _advance();
                         return true;
                     }
@@ -294,8 +417,7 @@ namespace simpleJson {
                     returnToken.push_back('l');
                     break;
                 case DfaStat::NullL2:
-                    if (const char nextChar = _peek(); std::isspace(nextChar) || nextChar == '\0' ||
-                        nextChar == ',' || nextChar == ']' || nextChar == '}') {
+                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
                         _advance();
                         return true;
                     }

@@ -57,7 +57,7 @@ namespace simpleJson {
             InString, StringEscape, EndString,
 
             NumberSign, NumberZero, NumberIntegral, NumberFractionBegin, NumberFraction,
-            NumberExponentBegin, NumberExponentSign, NumberExponent,
+            NumberExponentBegin, NumberExponentSign, NumberExponent, NumberEnd,
 
             TrueT, TrueR, TrueU, TrueE,
 
@@ -71,6 +71,7 @@ namespace simpleJson {
         POS_T _curCol{0}; // 当前字符列
 
         void _scan();
+        [[nodiscard]] bool _dfaDone(char curChar) const noexcept; // 判断一个token是否结束
         [[nodiscard]] bool _isAtEnd() const noexcept;
         [[nodiscard]] char _prev() const noexcept;
         [[nodiscard]] char _current() const noexcept;
