@@ -33,6 +33,35 @@ namespace simpleJson {
         std::vector<Token> tokens; // Token流
     };
 
+    // 这个类用来存储词法，语法分析中检测到的各种错误
+    class ErrMsgs {
+        struct errInfo {
+            // 错误地点的上下文，可以通过函数参数选择打印或者不打印错误上下文
+            std::string currentLine;
+            std::string prevLine;
+            std::string nextLine;
+
+            std::string errDesc; // 错误描述
+            Token errToken; // 出错token
+        };
+
+        std::vector<errInfo> _messages;
+    public:
+        ErrMsgs() = default;
+        ~ErrMsgs() = default;
+
+        ErrMsgs(const ErrMsgs&) = delete;
+        ErrMsgs(ErrMsgs&&) = delete;
+        ErrMsgs& operator=(const ErrMsgs&) = delete;
+        ErrMsgs& operator=(ErrMsgs&&) = delete;
+
+        [[nodiscard]] bool hasError() const noexcept;
+        void addError(std::string &&curLine, std::string &&prevLine,
+                      std::string &&nextLine, std::string &&errDesc, Token &&errToken);
+
+        void throwError(bool throwAll = false) const;
+    };
+
     class Lexer {
     public:
         JsonData _data; // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
@@ -71,13 +100,14 @@ namespace simpleJson {
         POS_T _curCol{0}; // 当前字符列
 
         void _scan();
+
         [[nodiscard]] bool _dfaDone(char curChar) const noexcept; // 判断一个token是否结束
         [[nodiscard]] bool _isAtEnd() const noexcept;
         [[nodiscard]] char _prev() const noexcept;
         [[nodiscard]] char _current() const noexcept;
         [[nodiscard]] char _peek() const noexcept;
         char _advance() noexcept;
-        [[nodiscard]] Token _makeToken(std::string&& str, TokenType type) const noexcept;
+        [[nodiscard]] static Token _makeToken(std::string&& str, TokenType type, POS_T row, POS_T col) noexcept;
 
         // 以下函数都是_scan函数的子模块
         bool _parseString(std::string& returnToken); // 解析json字符串

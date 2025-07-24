@@ -4,37 +4,87 @@
 #include <iostream>
 
 namespace simpleJson {
+    bool ErrMsgs::hasError() const noexcept {
+        return !_messages.empty();
+    }
+
+    void ErrMsgs::addError(std::string &&curLine, std::string &&prevLine,
+                           std::string &&nextLine, std::string &&errDesc, Token &&errToken) {
+        _messages.push_back({
+            std::move(curLine), std::move(prevLine), std::move(nextLine),
+            std::move(errDesc), std::move(errToken)
+        });
+    }
+
+    void ErrMsgs::throwError(bool throwAll) const {
+        if (!hasError())
+            return;
+
+        std::string errorPrintInfo;
+        for (size_t i = 0; i < throwAll ? _messages.size() : 1; i++) {
+            const POS_T errLineIndex = _messages[i].errToken.row + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
+            // 打印错误所在行上文
+            if (!_messages[i].prevLine.empty()) {
+                std::string prevLineInfo(std::to_string(errLineIndex - 1) + " | " + _messages[i].prevLine);
+                errorPrintInfo.append(prevLineInfo);
+            }
+
+            // 构建错误所在行信息
+            std::string LineInfo(std::to_string(errLineIndex) + " | " + _messages[i].errDesc);
+            // 构建空格缩进
+            std::string indent(std::to_string(errLineIndex).length() + 3 + _messages[i].errToken.col, ' ');
+            errorPrintInfo.append(indent);
+            // 高亮错误token
+            std::string highlight(_messages[i].errToken.len, '~');
+            errorPrintInfo.append(highlight);
+            // 添加错误描述
+            errorPrintInfo.append(_messages[i].errDesc + "\n");
+
+            // 打印错误所在行下文
+            if (!_messages[i].nextLine.empty()) {
+                std::string nextLineInfo(std::to_string(errLineIndex + 1) + " | " + _messages[i].nextLine);
+                errorPrintInfo.append(nextLineInfo);
+            }
+
+            // 构建分隔符
+            errorPrintInfo.append("\n- - - - - - - - - - -\n");
+        }
+    }
+
+
     void Lexer::_scan() {
         for (_curIndex = 0; _curIndex < _data.source.length();) {
             switch (_data.source[_curIndex]) {
                 case '{':
-                    _data.tokens.push_back(_makeToken("{", TokenType::LBRACE));
+                    _data.tokens.push_back(_makeToken("{", TokenType::LBRACE, _curRow, _curCol));
                     _advance();
                     break;
                 case '}':
-                    _data.tokens.push_back(_makeToken("{", TokenType::RBRACE));
+                    _data.tokens.push_back(_makeToken("{", TokenType::RBRACE, _curRow, _curCol));
                     _advance();
                     break;
                 case '[':
-                    _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET));
+                    _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET, _curRow, _curCol));
                     _advance();
                     break;
                 case ']':
-                    _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET));
+                    _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET, _curRow, _curCol));
                     _advance();
                     break;
                 case ',':
-                    _data.tokens.push_back(_makeToken(",", TokenType::COMMA));
+                    _data.tokens.push_back(_makeToken(",", TokenType::COMMA, _curRow, _curCol));
                     _advance();
                     break;
                 case ':':
-                    _data.tokens.push_back(_makeToken(":", TokenType::COLON));
+                    _data.tokens.push_back(_makeToken(":", TokenType::COLON, _curRow, _curCol));
                     _advance();
                     break;
                 case '\"': {
+                    const POS_T strRow = _curRow;
+                    const POS_T strCol = _curCol;
                     if (std::string returnToken; _parseString(returnToken)) {
                         std::cout << returnToken << std::endl;
-                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR));
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR, strRow, strCol));
                     } else {
                         std::cout << "error occurred!\n";
                         // ...处理错误
@@ -52,9 +102,11 @@ namespace simpleJson {
                 case '7':
                 case '8':
                 case '9': {
+                    const POS_T numRow = _curRow;
+                    const POS_T numCol = _curCol;
                     if (std::string returnToken; _parseNumber(returnToken)) {
                         std::cout << returnToken << std::endl;
-                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM));
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM, numRow, numCol));
                     } else {
                         std::cout << "error occurred! parsing number\n";
                         return;
@@ -65,10 +117,12 @@ namespace simpleJson {
                 case 't':
                 case 'f':
                 case 'n': {
+                    const POS_T liteRow = _curRow;
+                    const POS_T liteCol = _curCol;
                     std::string returnToken;
                     TokenType type;
                     if (_parseLiteral(returnToken, type)) {
-                        _data.tokens.push_back(_makeToken(std::move(returnToken), type));
+                        _data.tokens.push_back(_makeToken(std::move(returnToken), type, liteRow, liteCol));
                     } else {
                         std::cout << "出错了，json不支持此类令牌" << std::endl;
                         // ...处理错误
@@ -129,11 +183,10 @@ namespace simpleJson {
         return '\0';
     }
 
-    Token Lexer::_makeToken(std::string &&str, TokenType type) const noexcept {
+    Token Lexer::_makeToken(std::string &&str, TokenType type, POS_T row, POS_T col) noexcept {
         const LENGTH_T tokenLen = str.length();
-        return {std::move(str), type, _curRow, _curCol, tokenLen};
+        return {std::move(str), type, row, col, tokenLen};
     }
-
 
     bool Lexer::_parseString(std::string &returnToken) {
         DfaStat curStat;
