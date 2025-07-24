@@ -87,19 +87,17 @@ namespace simpleJson {
             STRING_ESCAPE, STRING_UNICODE_START, ERROR
         };
 
-        enum class DfaStat {
-            Start, Done, Error,
+        enum class NumberDfaStat {
+            NUMBER_START, NUMBER_SIGN, NUMBER_ZERO, NUMBER_INTEGRAL,
+            NUMBER_FRACTION_BEGIN, NUMBER_FRACTION, NUMBER_EXPONENT_BEGIN,
+            NUMBER_EXPONENT_SIGN, NUMBER_EXPONENT, NUMBER_END, ERROR
+        };
 
-            StringStart, InString, StringEscape, StringUnicodeStart, StringEnd,
-
-            NumberSign, NumberZero, NumberIntegral, NumberFractionBegin, NumberFraction,
-            NumberExponentBegin, NumberExponentSign, NumberExponent, NumberEnd,
-
-            TrueT, TrueR, TrueU, TrueE,
-
-            FalseF, FalseA, FalseL, FalseS, FalseE,
-
-            NullN, NullU, NullL1, NullL2
+        enum class LiteralDfaStat {
+            LITERAL_START, LITERAL_END, ERROR,
+            TRUE_T, TRUE_R, TRUE_U, TRUE_E,
+            FALSE_F, FALSE_A, FALSE_L, FALSE_S, FALSE_E,
+            NULL_N, NULL_U, NULL_L1, NULL_L2
         };
 
         POS_T _curIndex{0}; // 当前在原始json字符串中的索引
@@ -108,13 +106,14 @@ namespace simpleJson {
 
         void _scan();
 
-        [[nodiscard]] bool _dfaDone(char curChar) const noexcept; // 判断一个token是否结束
+        [[nodiscard]] bool _tokenIsOver() const noexcept; // 判断一个token是否结束
         [[nodiscard]] bool _isAtEnd() const noexcept;
         [[nodiscard]] bool _isEndOfLine() const noexcept; // 判断一行是否结束
-        [[nodiscard]] char _prev() const noexcept;
+
         [[nodiscard]] char _current() const noexcept;
         [[nodiscard]] char _peek() const noexcept;
         char _advance() noexcept;
+
         [[nodiscard]] static Token _makeToken(std::string&& str, TokenType type, POS_T row, POS_T col) noexcept;
 
         // 以下函数都是_scan函数的子模块

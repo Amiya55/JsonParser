@@ -8,10 +8,19 @@ namespace simpleJson {
 #ifndef ERR_TYPES
 #define ERR_TYPES
 #define ERR_TYPE_MISMATCH "The type mismatch occured "  // 错误提示：类型不匹配
+
 #define ERR_MISSING_QUOTATION_MARK "Here missing quotation mark" // 错误提示，缺少引号
 #define ERR_INVALID_ESCAPE "Invalid escape sequence" // 错误提示，非法转义序列
-#define ERR_INCOMPLETE_UNICODE_ESCAPE "incomplete unicode escape sequence" // 错误提示，不完整的unicode转义序列
+#define ERR_INCOMPLETE_UNICODE_ESCAPE "Incomplete unicode escape sequence" // 错误提示，不完整的unicode转义序列
 #define ERR_INVALID_UNICODE_ESCAPE "Invalid unicode escape sequence" // 错误提示，非法的unicode转义序列
+
+#define ERR_INCOMPLETE_NUMBER "Incomplete number literal" // 错误提示，不完整的数字
+#define ERR_INVALID_NUMBER "Invalid number literal" // 错误提示，非法的数字字面量
+
+#define ERR_INVALID_LITERAL "Invalid json literal" // 错误提示，非法的json字面量
+#define LITERAL_GUESS_TRUE ", may be you mean true?" // 字面量猜测，true
+#define LITERAL_GUESS_FALSE ", may be you mean false?" // 字面量猜测，false
+#define LITERAL_GUESS_NULL ", may be you mean null?" // 字面量猜测，null
 #endif
 
 #ifndef POS_T

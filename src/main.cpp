@@ -105,14 +105,14 @@ void convert_unicode_test() {
 }
 
 void lexer_test() {
-    // std::string jsonStr("nUll");
-    // simpleJson::Lexer lexer(jsonStr);
-
-    std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9fa5\\u4f00\"");
-    // std::string jsonStr(R"("\u4e00\u9fa5\u4f00")");
+    std::string jsonStr("True");
     simpleJson::Lexer lexer(jsonStr);
 
-    // std::string jsonStr("06.2");
+    // std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9ga5\\u4f00\"");
+    // std::string jsonStr(R"("\u4g00\u9fa5\u4f00")");
+    // simpleJson::Lexer lexer(jsonStr);
+
+    // std::string jsonStr("6.2e");
     // simpleJson::Lexer lexer(jsonStr);
 }
 

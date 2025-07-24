@@ -113,9 +113,9 @@ namespace simpleJson {
                     std::string errInfo;
                     if (_parseNumber(returnToken, errInfo)) {
                         std::cout << returnToken << std::endl;
-                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM, numRow, numCol));
+                        // _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM, numRow, numCol));
                     } else {
-                        std::cout << "error occurred! parsing number\n";
+                        std::cout << "error occurred! parsing number\n" << errInfo;
                         return;
                         // ...处理错误
                     }
@@ -130,9 +130,11 @@ namespace simpleJson {
                     std::string errInfo;
                     TokenType type;
                     if (_parseLiteral(returnToken, errInfo, type)) {
+                        std::cout << returnToken << std::endl;
                         _data.tokens.push_back(_makeToken(std::move(returnToken), type, liteRow, liteCol));
                     } else {
                         std::cout << "出错了，json不支持此类令牌" << std::endl;
+                        std::cout << errInfo << std::endl;
                         // ...处理错误
                     }
                     break;
@@ -154,12 +156,12 @@ namespace simpleJson {
         }
     }
 
-    bool Lexer::_dfaDone(char curChar) const noexcept {
-        return !_isAtEnd() && (std::isspace(curChar) ||
+    bool Lexer::_tokenIsOver() const noexcept {
+        const char curChar = _data.source[_curIndex];
+        return std::isspace(curChar) ||
                curChar == ']' || curChar == '\0' ||
-               curChar == '}' || curChar == ',');
+               curChar == '}' || curChar == ',';
     }
-
 
     bool Lexer::_isAtEnd() const noexcept {
         return _curIndex == _data.source.length();
@@ -167,13 +169,6 @@ namespace simpleJson {
 
     bool Lexer::_isEndOfLine() const noexcept {
         return _data.source[_curIndex] == '\n';
-    }
-
-    char Lexer::_prev() const noexcept {
-        if (_curIndex > 0) {
-            return _data.source[_curIndex - 1];
-        }
-        return '\0';
     }
 
     char Lexer::_current() const noexcept {
@@ -207,8 +202,7 @@ namespace simpleJson {
         StringDfaStat curStat = StringDfaStat::STRING_START;
         std::string unicode_buffer;
 
-        while (curStat != StringDfaStat::STRING_END &&
-               curStat != StringDfaStat::ERROR) {
+        while (curStat != StringDfaStat::STRING_END && curStat != StringDfaStat::ERROR) {
             if (_isEndOfLine()) {
                 // 在非StringDfaStat::STRING_END情况下结束一行，意味着json字符串没有被引号括起来
                 curStat = StringDfaStat::ERROR;
@@ -263,7 +257,7 @@ namespace simpleJson {
                     break;
 
                 case StringDfaStat::STRING_UNICODE_START:
-                    for (int i = 0; i < 4; ++i, _advance()) {
+                    for (int i = 0; i < 4; ++i) {
                         if (_isEndOfLine()) {
                             curStat = StringDfaStat::ERROR;
                             errInfo = ERR_MISSING_QUOTATION_MARK;
@@ -274,14 +268,17 @@ namespace simpleJson {
                             (_current() >= 'a' && _current() <= 'f') ||
                             (_current() >= 'A' && _current() <= 'F')) {
                             unicode_buffer += _current();
+                            _advance();
                         } else {
                             curStat = StringDfaStat::ERROR;
                             errInfo = ERR_INVALID_ESCAPE;
                             break;;
                         }
                     }
-                    returnToken += convert_unicode_escape(unicode_buffer);
-                    curStat = StringDfaStat::IN_STRING;
+                    if (curStat != StringDfaStat::ERROR) {
+                        returnToken += convert_unicode_escape(unicode_buffer);
+                        curStat = StringDfaStat::IN_STRING;
+                    }
                     break;
             }
         }
@@ -290,223 +287,297 @@ namespace simpleJson {
     }
 
     bool Lexer::_parseNumber(std::string &returnToken, std::string& errInfo) {
-        DfaStat curStat;
-        if (const char ch = _current(); ch == '-') {
-            curStat = DfaStat::NumberSign;
-        } else if (ch == '0') {
-            curStat = DfaStat::NumberZero;
-        } else if (std::isdigit(ch)) {
-            curStat = DfaStat::NumberIntegral;
-        } else {
-            return false;
-        }
+        returnToken.clear();
+        errInfo.clear();
 
-        while (true) {
-            switch (curStat) {
-                case DfaStat::NumberSign:
-                    if (std::isdigit(_peek()))
-                        curStat = DfaStat::NumberIntegral;
-                    else
-                        return false;
+        NumberDfaStat curStat = NumberDfaStat::NUMBER_START;
 
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberZero:
-                    if (const char nextChar = _peek(); nextChar == '.')
-                        curStat = DfaStat::NumberFractionBegin;
-                    else if (nextChar == 'e')
-                        curStat = DfaStat::NumberExponentBegin;
-                    else if (_dfaDone(nextChar))
-                        curStat = DfaStat::NumberEnd;
-                    else
-                        return false;
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberIntegral:
-                    if (const char nextChar = _peek(); nextChar == '.') {
-                        curStat = DfaStat::NumberFractionBegin;
-                    }
-                    else if (nextChar == 'e') {
-                        curStat = DfaStat::NumberExponentBegin;
-                    }
-                    else if (_dfaDone(nextChar)) {
-                        curStat = DfaStat::NumberEnd;
-                    }
-                    else {
-                        if (!std::isdigit(nextChar))
-                            return false;
-                    }
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberFractionBegin:
-                    if (const char nextChar = _peek(); std::isdigit(nextChar))
-                        curStat = DfaStat::NumberFraction;
-                    else
-                        return false;
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberFraction:
-                    if (const char nextChar = _peek(); nextChar == 'e') {
-                        curStat = DfaStat::NumberExponentBegin;
-                    }
-                    else if (_dfaDone(nextChar)) {
-                        curStat = DfaStat::NumberEnd;
-                    }
-                    else {
-                        if (!std::isdigit(nextChar))
-                            return false;
-                    }
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberExponentBegin:
-                    if (const char nextChar = _peek(); nextChar == '-')
-                        curStat = DfaStat::NumberExponentSign;
-                    else if (std::isdigit(nextChar))
-                        curStat = DfaStat::NumberExponent;
-                    else
-                        return false;
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberExponentSign:
-                    if (const char nextChar = _peek(); std::isdigit(nextChar))
-                        curStat = DfaStat::NumberExponent;
-                    else
-                        return false;
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberExponent:
-                    if (const char nextChar = _peek(); std::isdigit(nextChar))
-                        curStat = DfaStat::NumberExponent;
-                    else if (_dfaDone(nextChar))
-                        curStat = DfaStat::NumberEnd;
-                    else
-                        return false;
-
-                    returnToken.push_back(_current());
-                    _advance();
-                    break;
-                case DfaStat::NumberEnd:
-                    return true;
+        while (curStat != NumberDfaStat::NUMBER_END && curStat != NumberDfaStat::ERROR) {
+            const char curChar = _current();
+            if (_tokenIsOver()) {
+                if (curStat == NumberDfaStat::NUMBER_ZERO ||
+                curStat == NumberDfaStat::NUMBER_INTEGRAL ||
+                curStat == NumberDfaStat::NUMBER_EXPONENT ||
+                curStat == NumberDfaStat::NUMBER_FRACTION){
+                    curStat = NumberDfaStat::NUMBER_END;
+                } else {
+                    errInfo = ERR_INCOMPLETE_NUMBER;
+                    curStat = NumberDfaStat::ERROR;
+                }
+                break;
             }
+
+            switch (curStat) {
+                case NumberDfaStat::NUMBER_START:
+                    if (curChar == '0') {
+                        curStat = NumberDfaStat::NUMBER_ZERO;
+                    } else if (curChar == '-') {
+                        curStat = NumberDfaStat::NUMBER_SIGN;
+                    } else if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_ZERO:
+                    if (curChar == '.') {
+                        curStat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
+                    } else if (curChar == 'e' || curChar == 'E') {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_SIGN:
+                    if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_INTEGRAL:
+                    if (curChar == '.') {
+                        curStat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
+                    } else if (curChar == 'e' || curChar == 'E') {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                    } else if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_FRACTION_BEGIN:
+                    if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_FRACTION;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_FRACTION:
+                    if (curChar == 'e' || curChar == 'E') {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                    } else if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_FRACTION;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_EXPONENT_BEGIN:
+                    if (curChar == '-') {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT_SIGN;
+                    } else if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_EXPONENT_SIGN:
+                    if (std::isdigit(curChar)) {
+                        curStat = NumberDfaStat::NUMBER_EXPONENT;
+                    } else {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+
+                case NumberDfaStat::NUMBER_EXPONENT:
+                    if (!std::isdigit(curChar)) {
+                        errInfo = ERR_INVALID_NUMBER;
+                        curStat = NumberDfaStat::ERROR;
+                    }
+                    break;
+            }
+            returnToken += curChar;
+            _advance();
         }
+
+        return curStat == NumberDfaStat::NUMBER_END;
     }
 
     bool Lexer::_parseLiteral(std::string &returnToken, std::string& errInfo, TokenType &type) {
-        DfaStat curStat;
-        if (const char ch = _current(); ch == 't') {
-            type = TokenType::TRUE;
-            curStat = DfaStat::TrueT;
-            returnToken.push_back('t');
-        } else if (ch == 'f') {
-            type = TokenType::FALSE;
-            curStat = DfaStat::FalseF;
-            returnToken.push_back('f');
-        } else if (ch == 'n') {
-            type = TokenType::NULL_;
-            curStat = DfaStat::NullN;
-            returnToken.push_back('n');
-        } else {
-            return false;
-        }
+        returnToken.clear();
+        errInfo.clear();
 
-        while (true) {
+        LiteralDfaStat curStat = LiteralDfaStat::LITERAL_START;
+
+        while (curStat != LiteralDfaStat::LITERAL_END && curStat != LiteralDfaStat::ERROR) {
+            if (_isEndOfLine() && curStat != LiteralDfaStat::LITERAL_END) {
+                curStat = LiteralDfaStat::ERROR;
+                errInfo = ERR_INVALID_LITERAL;
+                break;
+            }
+
+            const char curChar = _current();
+
             switch (curStat) {
-                case DfaStat::TrueT:
-                    if (_peek() == 'r') _advance();
-                    else return false;
-                    curStat = DfaStat::TrueR;
-                    returnToken.push_back('r');
-                    break;
-                case DfaStat::TrueR:
-                    if (_peek() == 'u') _advance();
-                    else return false;
-                    curStat = DfaStat::TrueU;
-                    returnToken.push_back('u');
-                    break;
-                case DfaStat::TrueU:
-                    if (_peek() == 'e') _advance();
-                    else return false;
-                    curStat = DfaStat::TrueE;
-                    returnToken.push_back('e');
-                    break;
-                case DfaStat::TrueE: {
-                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
-                        _advance();
-                        return true;
+                case LiteralDfaStat::LITERAL_START:
+                    if (curChar == 't') {
+                        curStat = LiteralDfaStat::TRUE_T;
+                    } else if (curChar == 'f') {
+                        curStat = LiteralDfaStat::FALSE_F;
+                    } else if (curChar == 'n') {
+                        curStat = LiteralDfaStat::NULL_N;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL;
+                        curStat = LiteralDfaStat::ERROR;
                     }
-                    return false;
-                }
+                    returnToken += curChar;
+                    _advance();
+                    break;
 
-                case DfaStat::FalseF:
-                    if (_peek() == 'a') _advance();
-                    else return false;
-                    curStat = DfaStat::FalseA;
-                    returnToken.push_back('a');
-                    break;
-                case DfaStat::FalseA:
-                    if (_peek() == 'l') _advance();
-                    else return false;
-                    curStat = DfaStat::FalseL;
-                    returnToken.push_back('l');
-                    break;
-                case DfaStat::FalseL:
-                    if (_peek() == 's') _advance();
-                    else return false;
-                    curStat = DfaStat::FalseS;
-                    returnToken.push_back('s');
-                    break;
-                case DfaStat::FalseS:
-                    if (_peek() == 'e') _advance();
-                    else return false;
-                    curStat = DfaStat::FalseE;
-                    returnToken.push_back('e');
-                    break;
-                case DfaStat::FalseE: {
-                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
-                        _advance();
-                        return true;
+                case LiteralDfaStat::TRUE_T:
+                    if (curChar == 'r') {
+                        curStat = LiteralDfaStat::TRUE_R;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                        curStat = LiteralDfaStat::ERROR;
                     }
-                    return false;
-                }
+                    returnToken += curChar;
+                    _advance();
+                    break;
 
-                case DfaStat::NullN:
-                    if (_peek() == 'u') _advance();
-                    else return false;
-                    curStat = DfaStat::NullU;
-                    returnToken.push_back('u');
-                    break;
-                case DfaStat::NullU:
-                    if (_peek() == 'l') _advance();
-                    else return false;
-                    curStat = DfaStat::NullL1;
-                    returnToken.push_back('l');
-                    break;
-                case DfaStat::NullL1:
-                    if (_peek() == 'l') _advance();
-                    else return false;
-                    curStat = DfaStat::NullL2;
-                    returnToken.push_back('l');
-                    break;
-                case DfaStat::NullL2:
-                    if (const char nextChar = _peek(); _dfaDone(nextChar)) {
-                        _advance();
-                        return true;
+                case LiteralDfaStat::TRUE_R:
+                    if (curChar == 'u') {
+                        curStat = LiteralDfaStat::TRUE_U;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                        curStat = LiteralDfaStat::ERROR;
                     }
-                    return false;
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::TRUE_U:
+                    if (curChar == 'e') {
+                        curStat = LiteralDfaStat::TRUE_E;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::TRUE_E:
+                    if (_tokenIsOver()) {
+                        curStat = LiteralDfaStat::LITERAL_END;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    break;
+
+                case LiteralDfaStat::FALSE_F:
+                    if (curChar == 'a') {
+                        curStat = LiteralDfaStat::FALSE_A;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::FALSE_A:
+                    if (curChar == 'l') {
+                        curStat = LiteralDfaStat::FALSE_L;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::FALSE_L:
+                    if (curChar == 's') {
+                        curStat = LiteralDfaStat::FALSE_S;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::FALSE_S:
+                    if (curChar == 'e') {
+                        curStat = LiteralDfaStat::FALSE_E;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::FALSE_E:
+                    if (_tokenIsOver()) {
+                        curStat = LiteralDfaStat::LITERAL_END;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    break;
+
+                case LiteralDfaStat::NULL_N:
+                    if (curChar == 'u') {
+                        curStat = LiteralDfaStat::NULL_U;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::NULL_U:
+                    if (curChar == 'l') {
+                        curStat = LiteralDfaStat::NULL_L1;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::NULL_L1:
+                    if (curChar == 'l') {
+                        curStat = LiteralDfaStat::NULL_L2;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    returnToken += curChar;
+                    _advance();
+                    break;
+
+                case LiteralDfaStat::NULL_L2:
+                    if (_tokenIsOver()) {
+                        curStat = LiteralDfaStat::LITERAL_END;
+                    } else {
+                        errInfo = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                        curStat = LiteralDfaStat::ERROR;
+                    }
+                    break;
             }
         }
+
+        return curStat == LiteralDfaStat::LITERAL_END;
     }
 }
