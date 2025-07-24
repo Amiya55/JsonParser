@@ -79,11 +79,18 @@ namespace simpleJson {
         Lexer& operator=(Lexer&&) = delete;
 
     private:
+        ErrMsgs _errMsgs;
+
         // Dfa基本状态
+        enum class StringDfaStat {
+            STRING_START, IN_STRING, STRING_END,
+            STRING_ESCAPE, STRING_UNICODE_START, ERROR
+        };
+
         enum class DfaStat {
             Start, Done, Error,
 
-            InString, StringEscape, EndString,
+            StringStart, InString, StringEscape, StringUnicodeStart, StringEnd,
 
             NumberSign, NumberZero, NumberIntegral, NumberFractionBegin, NumberFraction,
             NumberExponentBegin, NumberExponentSign, NumberExponent, NumberEnd,
@@ -103,6 +110,7 @@ namespace simpleJson {
 
         [[nodiscard]] bool _dfaDone(char curChar) const noexcept; // 判断一个token是否结束
         [[nodiscard]] bool _isAtEnd() const noexcept;
+        [[nodiscard]] bool _isEndOfLine() const noexcept; // 判断一行是否结束
         [[nodiscard]] char _prev() const noexcept;
         [[nodiscard]] char _current() const noexcept;
         [[nodiscard]] char _peek() const noexcept;
@@ -110,9 +118,9 @@ namespace simpleJson {
         [[nodiscard]] static Token _makeToken(std::string&& str, TokenType type, POS_T row, POS_T col) noexcept;
 
         // 以下函数都是_scan函数的子模块
-        bool _parseString(std::string& returnToken); // 解析json字符串
-        bool _parseNumber(std::string& returnToken); // 解析json数字
-        bool _parseLiteral(std::string& returnToken, TokenType& type); // 解析json字面量(true, false, null)
+        bool _parseString(std::string& returnToken, std::string& errInfo); // 解析json字符串
+        bool _parseNumber(std::string& returnToken, std::string& errInfo); // 解析json数字
+        bool _parseLiteral(std::string& returnToken, std::string& errInfo, TokenType& type); // 解析json字面量(true, false, null)
     };
 }
 

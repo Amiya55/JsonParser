@@ -33,6 +33,8 @@ namespace simpleJson {
             std::string LineInfo(std::to_string(errLineIndex) + " | " + _messages[i].currentLine);
             errorPrintInfo.append(LineInfo);
             // 构建空格缩进
+            // 下面的errLineIndex是行号长度，数字3为字符串" | "长度，
+            // _messages[i].errToken.col为本行距离错误token首字符的长度，数字1为索引差值
             std::string indent(std::to_string(errLineIndex).length() + 3 + _messages[i].errToken.col - 1, ' ');
             errorPrintInfo.append(indent);
             // 高亮错误token
@@ -53,7 +55,6 @@ namespace simpleJson {
 
         throw std::runtime_error(errorPrintInfo);
     }
-
 
     void Lexer::_scan() {
         for (_curIndex = 0; _curIndex < _data.source.length();) {
@@ -85,12 +86,13 @@ namespace simpleJson {
                 case '\"': {
                     const POS_T strRow = _curRow;
                     const POS_T strCol = _curCol;
-                    if (std::string returnToken; _parseString(returnToken)) {
+                    std::string returnToken;
+                    std::string errInfo;
+                    if (_parseString(returnToken, errInfo)) {
                         std::cout << returnToken << std::endl;
-                        _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR, strRow, strCol));
+                        // _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::STR, strRow, strCol));
                     } else {
-                        std::cout << "error occurred!\n";
-                        // ...处理错误
+                        std::cout << errInfo << std::endl;
                     }
                 }
                 break;
@@ -107,7 +109,9 @@ namespace simpleJson {
                 case '9': {
                     const POS_T numRow = _curRow;
                     const POS_T numCol = _curCol;
-                    if (std::string returnToken; _parseNumber(returnToken)) {
+                    std::string returnToken;
+                    std::string errInfo;
+                    if (_parseNumber(returnToken, errInfo)) {
                         std::cout << returnToken << std::endl;
                         _data.tokens.push_back(_makeToken(std::move(returnToken), TokenType::NUM, numRow, numCol));
                     } else {
@@ -123,8 +127,9 @@ namespace simpleJson {
                     const POS_T liteRow = _curRow;
                     const POS_T liteCol = _curCol;
                     std::string returnToken;
+                    std::string errInfo;
                     TokenType type;
-                    if (_parseLiteral(returnToken, type)) {
+                    if (_parseLiteral(returnToken, errInfo, type)) {
                         _data.tokens.push_back(_makeToken(std::move(returnToken), type, liteRow, liteCol));
                     } else {
                         std::cout << "出错了，json不支持此类令牌" << std::endl;
@@ -160,6 +165,10 @@ namespace simpleJson {
         return _curIndex == _data.source.length();
     }
 
+    bool Lexer::_isEndOfLine() const noexcept {
+        return _data.source[_curIndex] == '\n';
+    }
+
     char Lexer::_prev() const noexcept {
         if (_curIndex > 0) {
             return _data.source[_curIndex - 1];
@@ -191,77 +200,96 @@ namespace simpleJson {
         return {std::move(str), type, row, col, tokenLen};
     }
 
-    bool Lexer::_parseString(std::string &returnToken) {
-        DfaStat curStat;
-        bool hasUnicodeEscape = false; // 如果存在unicode转义序列，需要进行向utf8的转换
-        if (const char ch = _current(); ch == '\"') {
-            curStat = DfaStat::InString;
-            _advance();
-        } else {
-            return false;
-        }
+    bool Lexer::_parseString(std::string &returnToken, std::string& errInfo) {
+        returnToken.clear();
+        errInfo.clear();
 
-        while (true) {
+        StringDfaStat curStat = StringDfaStat::STRING_START;
+        std::string unicode_buffer;
+
+        while (curStat != StringDfaStat::STRING_END &&
+               curStat != StringDfaStat::ERROR) {
+            if (_isEndOfLine()) {
+                // 在非StringDfaStat::STRING_END情况下结束一行，意味着json字符串没有被引号括起来
+                curStat = StringDfaStat::ERROR;
+                errInfo = ERR_MISSING_QUOTATION_MARK;
+                break;
+            }
+
+            const char curChar = _current();
+
             switch (curStat) {
-                case DfaStat::InString:
-                    if (_current() == '\"' && _prev() != '\\') {
-                        curStat = DfaStat::EndString;
-                        break;
+                case StringDfaStat::STRING_START:
+                    if (curChar == '"') {
+                        curStat = StringDfaStat::IN_STRING;
+                    } else {
+                        curStat = StringDfaStat::ERROR;
+                        errInfo = ERR_MISSING_QUOTATION_MARK;
                     }
-
-                    if (_current() == '\\') {
-                        switch (_peek()) {
-                            case '/':
-                                _advance();
-                                break;
-                            case 'u':
-                                hasUnicodeEscape = true;
-                                curStat = DfaStat::StringEscape;
-                            case '\\':
-                            case '\"':
-                            case 'n':
-                            case 't':
-                            case 'b':
-                            case 'f':
-                            case 'r':
-                                returnToken.push_back('\\');
-                                _advance();
-                                break;
-                            default:
-                                return false;
-                        }
-                    }
-                    returnToken.push_back(_current());
                     _advance();
                     break;
-                case DfaStat::StringEscape: {
-                    constexpr int unicodeEscapeLen = 4; // unicode转义序列字符数为4，例如\u4e00
-                    for (int i = 0; i < unicodeEscapeLen; ++i) {
+
+                case StringDfaStat::IN_STRING:
+                    if (curChar == '"') {
+                        curStat = StringDfaStat::STRING_END;
+                    } else if (curChar == '\\') {
+                        curStat = StringDfaStat::STRING_ESCAPE;
+                    } else {
+                        returnToken += curChar;
+                    }
+                    _advance();
+                    break;
+
+                case StringDfaStat::STRING_ESCAPE:
+                    switch (curChar) {
+                        case '\\': returnToken += '\\'; curStat = StringDfaStat::IN_STRING; break;
+                        case '"': returnToken += '"'; curStat = StringDfaStat::IN_STRING; break;
+                        case '/': returnToken += '/'; curStat = StringDfaStat::IN_STRING; break;
+                        case 'b': returnToken += '\b'; curStat = StringDfaStat::IN_STRING; break;
+                        case 'f': returnToken += '\f'; curStat = StringDfaStat::IN_STRING; break;
+                        case 'r': returnToken += '\r'; curStat = StringDfaStat::IN_STRING; break;
+                        case 'n': returnToken += '\n'; curStat = StringDfaStat::IN_STRING; break;
+                        case 't': returnToken += '\t'; curStat = StringDfaStat::IN_STRING; break;
+                        case 'u':
+                            curStat = StringDfaStat::STRING_UNICODE_START;
+                            unicode_buffer = "\\u";
+                            break;
+                        default:
+                            curStat = StringDfaStat::ERROR;
+                            errInfo = ERR_INVALID_ESCAPE + '\\' + curChar;
+                            break;
+                    }
+                    _advance();
+                    break;
+
+                case StringDfaStat::STRING_UNICODE_START:
+                    for (int i = 0; i < 4; ++i, _advance()) {
+                        if (_isEndOfLine()) {
+                            curStat = StringDfaStat::ERROR;
+                            errInfo = ERR_MISSING_QUOTATION_MARK;
+                            break;
+                        }
+
                         if (std::isdigit(_current()) ||
                             (_current() >= 'a' && _current() <= 'f') ||
                             (_current() >= 'A' && _current() <= 'F')) {
-                            returnToken.push_back(_current());
-                            _advance();
+                            unicode_buffer += _current();
                         } else {
-                            return false;
+                            curStat = StringDfaStat::ERROR;
+                            errInfo = ERR_INVALID_ESCAPE;
+                            break;;
                         }
                     }
-                    curStat = DfaStat::InString;
+                    returnToken += convert_unicode_escape(unicode_buffer);
+                    curStat = StringDfaStat::IN_STRING;
                     break;
-                }
-                case DfaStat::EndString:
-                    if (const char nextChar = _peek(); _dfaDone(nextChar) || nextChar == ':') {
-                        _advance();
-                        if (hasUnicodeEscape)
-                            returnToken = convert_unicode_escape(returnToken);
-                        return true;
-                    }
-                    return false;
             }
         }
+
+        return curStat == StringDfaStat::STRING_END;
     }
 
-    bool Lexer::_parseNumber(std::string &returnToken) {
+    bool Lexer::_parseNumber(std::string &returnToken, std::string& errInfo) {
         DfaStat curStat;
         if (const char ch = _current(); ch == '-') {
             curStat = DfaStat::NumberSign;
@@ -376,7 +404,7 @@ namespace simpleJson {
         }
     }
 
-    bool Lexer::_parseLiteral(std::string &returnToken, TokenType &type) {
+    bool Lexer::_parseLiteral(std::string &returnToken, std::string& errInfo, TokenType &type) {
         DfaStat curStat;
         if (const char ch = _current(); ch == 't') {
             type = TokenType::TRUE;

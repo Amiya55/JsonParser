@@ -108,12 +108,12 @@ void lexer_test() {
     // std::string jsonStr("nUll");
     // simpleJson::Lexer lexer(jsonStr);
 
-    // std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9fa5\\u4f00\"");
+    std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9fa5\\u4f00\"");
     // std::string jsonStr(R"("\u4e00\u9fa5\u4f00")");
-    // simpleJson::Lexer lexer(jsonStr);
-
-    std::string jsonStr("06.2");
     simpleJson::Lexer lexer(jsonStr);
+
+    // std::string jsonStr("06.2");
+    // simpleJson::Lexer lexer(jsonStr);
 }
 
 void errMsgs_test() {
@@ -143,7 +143,7 @@ int main() {
     // test_json_types2();
     // test_json_types3();
     // convert_unicode_test();
-    // lexer_test();
-    errMsgs_test();
+    lexer_test();
+    // errMsgs_test();
     return 0;
 }
