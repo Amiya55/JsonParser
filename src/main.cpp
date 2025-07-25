@@ -12,8 +12,10 @@
 using jValue = simpleJson::JsonValue;
 using jType = simpleJson::JsonType;
 
-void test_json_types1() {
-    try {
+void test_json_types1()
+{
+    try
+    {
         std::string str("hello world");
         std::vector<jValue> vec;
         jValue json(nullptr);
@@ -24,55 +26,50 @@ void test_json_types1() {
 
         json = str;
         std::cout << json.getVal<jType::String>() << std::endl;
-    } catch (std::exception &e) {
+    }
+    catch (std::exception &e)
+    {
         std::cerr << e.what() << std::endl;
     }
 }
 
-void test_json_types2() {
-    try {
+void test_json_types2()
+{
+    try
+    {
         std::string str("hello world");
         jValue jsonstr1("dhello");
         jValue jsonstr2(str);
         std::cout << jsonstr1.getVal<jType::String>() << std::endl;
         std::cout << jsonstr2.getVal<jType::String>() << std::endl;
 
-
         jValue json(nullptr);
         jValue json2(12.34);
         jValue json3(12);
 
-        jValue json4 = jValue::makeArr({
-            str, json2, false
-        });
+        jValue json4 = jValue::makeArr({str, json2, false});
         std::vector<jValue> vec = json4.getVal<jType::Array>();
         std::cout << vec[0].getVal<jType::String>() << std::endl;
         std::cout << vec[1].getVal<jType::Float>() << std::endl;
         std::cout << vec[2].getVal<jType::Bool>() << std::endl;
 
-        jValue json5 = jValue::makeObj({
-            {"string", true}, {"hello", "world"}, {"12", 12.34}
-        });
-    } catch (std::exception &e) {
+        jValue json5 = jValue::makeObj({{"string", true}, {"hello", "world"}, {"12", 12.34}});
+    }
+    catch (std::exception &e)
+    {
         std::cerr << e.what() << std::endl;
     }
 }
 
-void test_json_types3() {
+void test_json_types3()
+{
     jValue jv1("json");
     jValue jv2(12.323);
     jValue jv3(100);
     jValue jv4 = jValue::makeArr({jv1, jv2, jv3});
-    jValue jv5 = jValue::makeObj({
-        {"first", 12},
-        {"second", nullptr},
-        {"third", jv4}
-    });
+    jValue jv5 = jValue::makeObj({{"first", 12}, {"second", nullptr}, {"third", jv4}});
 
-    jValue jv6 = jValue::makeObj({
-        {"object", jv5},
-        {"array", jv4}
-    });
+    jValue jv6 = jValue::makeObj({{"object", jv5}, {"array", jv4}});
 
     jValue jv7(nullptr);
 
@@ -90,7 +87,8 @@ void test_json_types3() {
     std::cout << jv8.getType() << std::endl;
 }
 
-void convert_unicode_test() {
+void convert_unicode_test()
+{
     // try {
     //     std::string str("9f000");
     //     unsigned int result = std::stoul(str, nullptr, 16);
@@ -104,7 +102,8 @@ void convert_unicode_test() {
     std::cout << ret << std::endl;
 }
 
-void lexer_test() {
+void lexer_test()
+{
     std::string jsonStr("True");
     simpleJson::Lexer lexer(jsonStr);
 
@@ -116,25 +115,35 @@ void lexer_test() {
     // simpleJson::Lexer lexer(jsonStr);
 }
 
-void errMsgs_test() {
-    try {
-        simpleJson::ErrMsgs errMsgs;
-
-        std::string line1("  \"unicode\": \"\\u4e00\\u9fa5\\u1000\\uffff\"\n");
-        std::string line2("  \"number\": 0123,\n");
-        std::string line3("  \"flag\": true\n");
-        simpleJson::Token token{"0123", simpleJson::TokenType::NUM, 1, 13, 4};
-
-        errMsgs.addError(std::move(line1), std::move(line2),
-            std::move(line3), "No such number", std::move(token));
-
-        errMsgs.throwError();
-    } catch (std::exception &e) {
-        std::cerr << e.what() << std::endl;
+void errMsgs_test()
+{
+    try
+    {
+        simpleJson::Lexer(R"({
+            "literal": nulL,
+            "boolean": False,
+            "number": 23.23e,
+            "string: null
+        })");
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
     }
 }
 
-int main() {
+void line_split_test()
+{
+    std::cout << "行分割测试" << std::endl;
+    simpleJson::Lexer lexer(R"({
+        "number": 12e-2,
+        "literal": true,
+        "string": "json"
+    })");
+}
+
+int main()
+{
 #ifdef _WIN32
     SetConsoleOutputCP(65001);
 #endif
@@ -143,7 +152,8 @@ int main() {
     // test_json_types2();
     // test_json_types3();
     // convert_unicode_test();
-    lexer_test();
-    // errMsgs_test();
+    // lexer_test();
+    errMsgs_test();
+    // line_split_test();
     return 0;
 }
