@@ -216,7 +216,7 @@ char Lexer::_advance() noexcept
     return '\0';
 }
 
-Token Lexer::_makeToken(std::string &&str, TokenType type) noexcept
+Token Lexer::_makeToken(std::string &&str, TokenType type) const noexcept
 {
     const LENGTH_T tokenLen = str.length();
     return {std::move(str), type, _curRow, _curCol, tokenLen};

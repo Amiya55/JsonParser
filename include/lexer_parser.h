@@ -169,7 +169,7 @@ class Lexer
     [[nodiscard]] char _current() const noexcept;
     char _advance() noexcept;
 
-    [[nodiscard]] Token _makeToken(std::string &&str, TokenType type) noexcept;
+    [[nodiscard]] Token _makeToken(std::string &&str, TokenType type) const noexcept;
 
     // 以下函数都是_scan函数的子模块
     bool _parseString(Token &returnToken, ErrInfo &errInfo);  // 解析json字符串
