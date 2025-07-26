@@ -1,12 +1,12 @@
 #ifndef Lexer_Parser_H
 #define Lexer_Parser_H
 
+#include "config.h"
+
 #include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
-
-#include "config.h"
 
 namespace simpleJson
 {

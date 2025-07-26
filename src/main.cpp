@@ -1,9 +1,10 @@
-#include <exception>
-#include <iostream>
-
 #include "json_type.h"
 #include "lexer_parser.h"
 #include "utilities.h"
+
+#include <exception>
+#include <fstream>
+#include <iostream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -11,6 +12,23 @@
 
 using jValue = simpleJson::JsonValue;
 using jType = simpleJson::JsonType;
+
+std::string read_test()
+{
+    std::string result;
+
+    const std::string jsonPath("tmp.json");
+    std::fstream fs;
+    fs.open(jsonPath, std::ios::in);
+
+    std::string buffer;
+    while (std::getline(fs, buffer))
+    {
+        result += buffer + '\n';
+    }
+
+    return result;
+}
 
 void test_json_types1()
 {
@@ -119,12 +137,14 @@ void errMsgs_test()
 {
     try
     {
-        simpleJson::Lexer(R"({
-            "literal": nulL,
-            "boolean": False,
-            "number": 23.23e,
-            "string: null
-        })");
+        // simpleJson::Lexer(R"({
+        //     "literal": nulL,
+        //     "boolean": False,
+        //     "number": -0.23,
+        //     "string: null
+        // })");
+
+        simpleJson::Lexer lexer(read_test());
     }
     catch (const std::exception &e)
     {

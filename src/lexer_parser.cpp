@@ -1,6 +1,7 @@
 #include "lexer_parser.h"
 #include "config.h"
 #include "utilities.h"
+
 #include <stdexcept>
 #include <string>
 
@@ -434,7 +435,11 @@ bool Lexer::_parseNumber(Token &returnToken, ErrInfo &errInfo)
             break;
 
         case NumberDfaStat::NUMBER_SIGN:
-            if (std::isdigit(curChar))
+            if (curChar == '0')
+            {
+                curStat = NumberDfaStat::NUMBER_ZERO;
+            }
+            else if (std::isdigit(curChar))
             {
                 curStat = NumberDfaStat::NUMBER_INTEGRAL;
             }
