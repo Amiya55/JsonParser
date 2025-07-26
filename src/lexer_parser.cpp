@@ -231,8 +231,10 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
     errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
 
     StringDfaStat curStat = StringDfaStat::STRING_START;
-    std::string unicode_buffer;   // 暂时存储unicode转移序列
-    LENGTH_T totalUnicodeLen = 0; // 字符串中所有的unicode连在一起的长度，用于错误高亮打印
+    std::string unicode_buffer; // 暂时存储unicode转移序列
+
+    // 用于错误高亮打印，因为字符串有许多转义序列，无法直接将returnToken的长度等价于高亮长度，所以定义此变量用于高亮打印
+    LENGTH_T errorHighlightLen = 0;
 
     while (curStat != StringDfaStat::STRING_END && curStat != StringDfaStat::ERROR)
     {
@@ -258,6 +260,7 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
                 curStat = StringDfaStat::ERROR;
                 errInfo.errDesc = ERR_MISSING_QUOTATION_MARK;
             }
+
             _advance();
             break;
 
@@ -274,6 +277,8 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
             {
                 returnToken.rawValue += curChar;
             }
+
+            ++errorHighlightLen;
             _advance();
             break;
 
@@ -321,12 +326,12 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_ESCAPE;
                 break;
             }
+
+            errorHighlightLen += 2; // 一个"\"转义序列长度，例如"\n"
             _advance();
             break;
 
         case StringDfaStat::STRING_UNICODE_START:
-            totalUnicodeLen += 6; // 一个unicode序列长度，例如"\u4e00"
-
             for (int i = 0; i < 4; ++i)
             {
                 if (_isEndOfLine())
@@ -354,13 +359,14 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
                 returnToken.rawValue += convert_unicode_escape(unicode_buffer);
                 curStat = StringDfaStat::IN_STRING;
             }
+
+            errorHighlightLen += 4; // 一个unicode序列长度，例如"4e00"
             break;
         }
     }
 
-    POS_T tokenLen = returnToken.rawValue.length();
-    returnToken.len = tokenLen;
-    errInfo.len = tokenLen + totalUnicodeLen;
+    returnToken.len = returnToken.rawValue.length();
+    errInfo.len = errorHighlightLen;
 
     return curStat == StringDfaStat::STRING_END;
 }
@@ -535,7 +541,7 @@ bool Lexer::_parseNumber(Token &returnToken, ErrInfo &errInfo)
         _advance();
     }
 
-    POS_T tokenLen = returnToken.rawValue.length();
+    const POS_T tokenLen = returnToken.rawValue.length();
     returnToken.len = tokenLen;
     errInfo.len = tokenLen;
 
@@ -588,6 +594,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL;
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -602,6 +609,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -616,6 +624,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -630,6 +639,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -656,6 +666,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -670,6 +681,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -684,6 +696,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -698,6 +711,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -724,6 +738,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -738,6 +753,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -752,6 +768,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
                 errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
                 curStat = LiteralDfaStat::ERROR;
             }
+
             returnToken.rawValue += curChar;
             _advance();
             break;
@@ -770,7 +787,7 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
         }
     }
 
-    POS_T tokenLen = returnToken.rawValue.length();
+    const POS_T tokenLen = returnToken.rawValue.length();
     returnToken.len = tokenLen;
     errInfo.len = tokenLen;
 
