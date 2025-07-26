@@ -20,6 +20,10 @@ std::string read_test()
     const std::string jsonPath("tmp.json");
     std::fstream fs;
     fs.open(jsonPath, std::ios::in);
+    if (!fs.is_open())
+    {
+        std::cout << "failed to open " << jsonPath << std::endl;
+    }
 
     std::string buffer;
     while (std::getline(fs, buffer))
@@ -27,6 +31,7 @@ std::string read_test()
         result += buffer + '\n';
     }
 
+    fs.close();
     return result;
 }
 

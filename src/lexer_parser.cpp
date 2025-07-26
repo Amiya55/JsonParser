@@ -68,27 +68,27 @@ void Lexer::_scan()
         switch (_data.source[_curIndex])
         {
         case '{':
-            _data.tokens.push_back(_makeToken("{", TokenType::LBRACE, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken("{", TokenType::LBRACE));
             _advance();
             break;
         case '}':
-            _data.tokens.push_back(_makeToken("{", TokenType::RBRACE, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken("{", TokenType::RBRACE));
             _advance();
             break;
         case '[':
-            _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET));
             _advance();
             break;
         case ']':
-            _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET));
             _advance();
             break;
         case ',':
-            _data.tokens.push_back(_makeToken(",", TokenType::COMMA, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken(",", TokenType::COMMA));
             _advance();
             break;
         case ':':
-            _data.tokens.push_back(_makeToken(":", TokenType::COLON, _curRow, _curCol));
+            _data.tokens.push_back(_makeToken(":", TokenType::COLON));
             _advance();
             break;
         case '\"': {
@@ -180,6 +180,9 @@ void Lexer::_scan()
             }
         }
     }
+
+    // 最后读完字符串添加一个EOF
+    _data.tokens.push_back(_makeToken("", TokenType::EOF_));
 }
 
 bool Lexer::_tokenIsOver() const noexcept
@@ -203,15 +206,6 @@ char Lexer::_current() const noexcept
     return _data.source[_curIndex];
 }
 
-char Lexer::_peek() const noexcept
-{
-    if (!_isAtEnd())
-    {
-        return _data.source[_curIndex + 1];
-    }
-    return '\0';
-}
-
 char Lexer::_advance() noexcept
 {
     if (!_isAtEnd())
@@ -222,10 +216,10 @@ char Lexer::_advance() noexcept
     return '\0';
 }
 
-Token Lexer::_makeToken(std::string &&str, TokenType type, POS_T row, POS_T col) noexcept
+Token Lexer::_makeToken(std::string &&str, TokenType type) noexcept
 {
     const LENGTH_T tokenLen = str.length();
-    return {std::move(str), type, row, col, tokenLen};
+    return {std::move(str), type, _curRow, _curCol, tokenLen};
 }
 
 bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
@@ -237,7 +231,8 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
     errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
 
     StringDfaStat curStat = StringDfaStat::STRING_START;
-    std::string unicode_buffer; // 暂时存储unicode转移序列
+    std::string unicode_buffer;   // 暂时存储unicode转移序列
+    LENGTH_T totalUnicodeLen = 0; // 字符串中所有的unicode连在一起的长度，用于错误高亮打印
 
     while (curStat != StringDfaStat::STRING_END && curStat != StringDfaStat::ERROR)
     {
@@ -330,12 +325,14 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
             break;
 
         case StringDfaStat::STRING_UNICODE_START:
+            totalUnicodeLen += 6; // 一个unicode序列长度，例如"\u4e00"
+
             for (int i = 0; i < 4; ++i)
             {
                 if (_isEndOfLine())
                 {
                     curStat = StringDfaStat::ERROR;
-                    errInfo.errDesc = ERR_MISSING_QUOTATION_MARK;
+                    errInfo.errDesc = ERR_INCOMPLETE_UNICODE_ESCAPE;
                     break;
                 }
 
@@ -348,7 +345,7 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
                 else
                 {
                     curStat = StringDfaStat::ERROR;
-                    errInfo.errDesc = ERR_INVALID_ESCAPE;
+                    errInfo.errDesc = ERR_INVALID_UNICODE_ESCAPE;
                     break;
                 }
             }
@@ -363,7 +360,7 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
 
     POS_T tokenLen = returnToken.rawValue.length();
     returnToken.len = tokenLen;
-    errInfo.len = tokenLen;
+    errInfo.len = tokenLen + totalUnicodeLen;
 
     return curStat == StringDfaStat::STRING_END;
 }
@@ -557,7 +554,9 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
 
     while (curStat != LiteralDfaStat::LITERAL_END && curStat != LiteralDfaStat::ERROR)
     {
-        if (_isEndOfLine() && curStat != LiteralDfaStat::LITERAL_END)
+        // 已经到达行结尾，但是字面量没有到最后一个字符，则认为字面量不完整
+        if (_isEndOfLine() && curStat != LiteralDfaStat::TRUE_E && curStat != LiteralDfaStat::FALSE_E &&
+            curStat != LiteralDfaStat::NULL_L2)
         {
             curStat = LiteralDfaStat::ERROR;
             errInfo.errDesc = ERR_INVALID_LITERAL;
@@ -777,4 +776,5 @@ bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
 
     return curStat == LiteralDfaStat::LITERAL_END;
 }
+
 } // namespace simpleJson

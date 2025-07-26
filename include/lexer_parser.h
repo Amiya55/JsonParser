@@ -22,7 +22,8 @@ enum class TokenType
     COLON,
     TRUE,
     FALSE,
-    NULL_
+    NULL_,
+    EOF_
 };
 
 struct Token
@@ -165,10 +166,9 @@ class Lexer
     [[nodiscard]] bool _isEndOfLine() const noexcept; // 判断一行是否结束
 
     [[nodiscard]] char _current() const noexcept;
-    [[nodiscard]] char _peek() const noexcept;
     char _advance() noexcept;
 
-    [[nodiscard]] static Token _makeToken(std::string &&str, TokenType type, POS_T row, POS_T col) noexcept;
+    [[nodiscard]] Token _makeToken(std::string &&str, TokenType type) noexcept;
 
     // 以下函数都是_scan函数的子模块
     bool _parseString(Token &returnToken, ErrInfo &errInfo);  // 解析json字符串
