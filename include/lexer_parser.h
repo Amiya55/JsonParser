@@ -171,10 +171,9 @@ class Lexer
     [[nodiscard]] static Token _makeToken(std::string &&str, TokenType type, POS_T row, POS_T col) noexcept;
 
     // 以下函数都是_scan函数的子模块
-    bool _parseString(Token &returnToken, ErrInfo &errInfo); // 解析json字符串
-    bool _parseNumber(Token &returnToken, ErrInfo &errInfo); // 解析json数字
-    bool _parseLiteral(Token &returnToken, ErrInfo &errInfo,
-                       TokenType &type); // 解析json字面量(true, false, null)
+    bool _parseString(Token &returnToken, ErrInfo &errInfo);  // 解析json字符串
+    bool _parseNumber(Token &returnToken, ErrInfo &errInfo);  // 解析json数字
+    bool _parseLiteral(Token &returnToken, ErrInfo &errInfo); // 解析json字面量(true, false, null)
 };
 } // namespace simpleJson
 

@@ -11,13 +11,13 @@ bool ErrReporter::hasError() const noexcept
     return !_errors.empty();
 }
 
-void ErrReporter::throwError(bool throwAll) const
+void ErrReporter::throwError(const bool throwAll) const
 {
     if (!hasError())
         return;
 
     std::string errorPrintInfo;
-    size_t errorCount = throwAll ? _errors.size() : 1;
+    const size_t errorCount = throwAll ? _errors.size() : 1;
     for (size_t i = 0; i < errorCount; i++)
     {
         const POS_T errRow = _errors[i].row + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
@@ -135,8 +135,7 @@ void Lexer::_scan()
         case 'n': {
             Token returnToken;
             ErrInfo errInfo;
-            TokenType type;
-            if (_parseLiteral(returnToken, errInfo, type))
+            if (_parseLiteral(returnToken, errInfo))
             {
                 _data.tokens.push_back(std::move(returnToken));
             }
@@ -164,11 +163,8 @@ void Lexer::_scan()
                 // 初始化返回参数
                 const POS_T lineBegin = _data.linesIndex[_curRow].first;
                 const POS_T lineEnd = _data.linesIndex[_curRow].second;
-                ErrInfo errInfo = {.errDesc = ERR_UNKNOWN_VALUE,
-                                   .currentLine = _data.source.substr(lineBegin, lineEnd - lineBegin),
-                                   .row = _curRow,
-                                   .col = _curCol,
-                                   .len = 0};
+                ErrInfo errInfo = {ERR_UNKNOWN_VALUE, _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow,
+                                   _curCol, 0};
 
                 // 找到token结束位置
                 LENGTH_T count = 0;
@@ -234,14 +230,10 @@ Token Lexer::_makeToken(std::string &&str, TokenType type, POS_T row, POS_T col)
 bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
 {
     // 初始化返回参数
-    returnToken = {.rawValue = "", .type = TokenType::STR, .row = _curRow, .col = _curRow, .len = 0};
+    returnToken = {"", TokenType::STR, _curRow, _curRow, 0};
     const POS_T lineBegin = _data.linesIndex[_curRow].first;
     const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {.errDesc = "",
-               .currentLine = _data.source.substr(lineBegin, lineEnd - lineBegin),
-               .row = _curRow,
-               .col = _curCol,
-               .len = 0};
+    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
 
     StringDfaStat curStat = StringDfaStat::STRING_START;
     std::string unicode_buffer; // 暂时存储unicode转移序列
@@ -378,14 +370,10 @@ bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
 bool Lexer::_parseNumber(Token &returnToken, ErrInfo &errInfo)
 {
     // 初始化返回参数
-    returnToken = {.rawValue = "", .type = TokenType::NUM, .row = _curRow, .col = _curRow, .len = 0};
+    returnToken = {"", TokenType::NUM, _curRow, _curRow, 0};
     const POS_T lineBegin = _data.linesIndex[_curRow].first;
     const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {.errDesc = "",
-               .currentLine = _data.source.substr(lineBegin, lineEnd - lineBegin),
-               .row = _curRow,
-               .col = _curCol,
-               .len = 0};
+    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
 
     NumberDfaStat curStat = NumberDfaStat::NUMBER_START;
 
@@ -552,17 +540,13 @@ bool Lexer::_parseNumber(Token &returnToken, ErrInfo &errInfo)
     return curStat == NumberDfaStat::NUMBER_END;
 }
 
-bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo, TokenType &type)
+bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
 {
     // 初始化返回参数
-    returnToken = {.rawValue = "", .type = TokenType::TRUE, .row = _curRow, .col = _curRow, .len = 0};
+    returnToken = {"", TokenType::TRUE, _curRow, _curRow, 0};
     const POS_T lineBegin = _data.linesIndex[_curRow].first;
     const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {.errDesc = "",
-               .currentLine = _data.source.substr(lineBegin, lineEnd - lineBegin),
-               .row = _curRow,
-               .col = _curCol,
-               .len = 0};
+    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
 
     LiteralDfaStat curStat = LiteralDfaStat::LITERAL_START;
 
