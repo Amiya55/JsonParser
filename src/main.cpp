@@ -167,6 +167,24 @@ void line_split_test()
     })");
 }
 
+// token流查看
+void token_stream_test()
+{
+    try
+    {
+        simpleJson::Lexer lexer(read_test());
+        simpleJson::JsonData &data = lexer._data;
+        for (const auto &token : data.tokens)
+        {
+            std::cout << token.rawValue << std::endl;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+}
+
 int main()
 {
 #ifdef _WIN32
@@ -178,7 +196,8 @@ int main()
     // test_json_types3();
     // convert_unicode_test();
     // lexer_test();
-    errMsgs_test();
+    // errMsgs_test();
     // line_split_test();
+    token_stream_test();
     return 0;
 }

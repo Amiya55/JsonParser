@@ -2,6 +2,7 @@
 #define Lexer_Parser_H
 
 #include "config.h"
+#include "json_type.h"
 
 #include <map>
 #include <string>
@@ -174,6 +175,36 @@ class Lexer
     bool _parseString(Token &returnToken, ErrInfo &errInfo);  // 解析json字符串
     bool _parseNumber(Token &returnToken, ErrInfo &errInfo);  // 解析json数字
     bool _parseLiteral(Token &returnToken, ErrInfo &errInfo); // 解析json字面量(true, false, null)
+};
+
+class Parser
+{
+  public:
+    JsonValue _json;
+    JsonData _jsonData;
+
+    template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay<T>, JsonData>>>
+    explicit Parser(T &&jsonData) : _jsonData(std::forward<T>(jsonData))
+    {
+        _parse();
+    }
+    ~Parser() = default;
+
+    Parser(const Parser &) = delete;
+    Parser(Parser &&) = delete;
+    Parser &operator=(const Parser &) = delete;
+    Parser &operator=(const Parser &&) = delete;
+
+  private:
+    ErrReporter _errReporter;
+
+    void _parse() const noexcept; // 词法分析器入口
+    void _parseValue() const noexcept;
+    void _parseObject() const noexcept;
+    void _parseArray() const noexcept;
+
+    [[nodiscard]] const Token &peek() const noexcept;
+    const Token &_advance() const noexcept;
 };
 } // namespace simpleJson
 
