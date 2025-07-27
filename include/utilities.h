@@ -3,11 +3,11 @@
 
 #include <string>
 
-namespace simpleJson
+namespace simple_json
 {
-std::string encode_utf8(unsigned long codepoint) noexcept;
+std::string EncodeUtf8(unsigned long codepoint) noexcept;
 
-std::string convert_unicode_escape(const std::string &escape) noexcept;
-} // namespace simpleJson
+std::string ConvertUnicodeEscape(const std::string &escape) noexcept;
+} // namespace simple_json
 
 #endif // UTILITIES_H

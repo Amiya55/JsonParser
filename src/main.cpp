@@ -10,19 +10,19 @@
 #include <windows.h>
 #endif
 
-using jValue = simpleJson::JsonValue;
-using jType = simpleJson::JsonType;
+using jValue = simple_json::JsonValue;
+using jType = simple_json::JsonType;
 
-std::string read_test()
+std::string ReadTest()
 {
     std::string result;
 
-    const std::string jsonPath("tmp.json");
+    const std::string json_path("tmp.json");
     std::fstream fs;
-    fs.open(jsonPath, std::ios::in);
+    fs.open(json_path, std::ios::in);
     if (!fs.is_open())
     {
-        std::cout << "failed to open " << jsonPath << '\n';
+        std::cout << "failed to open " << json_path << '\n';
     }
 
     std::string buffer;
@@ -35,20 +35,20 @@ std::string read_test()
     return result;
 }
 
-void test_json_types1()
+void TestJsonTypes1()
 {
     try
     {
         std::string str("hello world");
         std::vector<jValue> vec;
         jValue json(nullptr);
-        std::cout << json.getVal<jType::Null>() << '\n';
+        std::cout << json.GetVal<jType::Null>() << '\n';
 
         json = 120.23;
-        std::cout << json.getVal<jType::Float>() << '\n';
+        std::cout << json.GetVal<jType::Float>() << '\n';
 
         json = str;
-        std::cout << json.getVal<jType::String>() << '\n';
+        std::cout << json.GetVal<jType::String>() << '\n';
     }
     catch (std::exception &e)
     {
@@ -56,27 +56,27 @@ void test_json_types1()
     }
 }
 
-void test_json_types2()
+void TestJsonTypes2()
 {
     try
     {
         std::string str("hello world");
         jValue jsonstr1("dhello");
         jValue jsonstr2(str);
-        std::cout << jsonstr1.getVal<jType::String>() << '\n';
-        std::cout << jsonstr2.getVal<jType::String>() << '\n';
+        std::cout << jsonstr1.GetVal<jType::String>() << '\n';
+        std::cout << jsonstr2.GetVal<jType::String>() << '\n';
 
         jValue json(nullptr);
         jValue json2(12.34);
         jValue json3(12);
 
-        jValue json4 = jValue::makeArr({str, json2, false});
-        std::vector<jValue> vec = json4.getVal<jType::Array>();
-        std::cout << vec[0].getVal<jType::String>() << '\n';
-        std::cout << vec[1].getVal<jType::Float>() << '\n';
-        std::cout << vec[2].getVal<jType::Bool>() << '\n';
+        jValue json4 = jValue::MakeArr({str, json2, false});
+        std::vector<jValue> vec = json4.GetVal<jType::Array>();
+        std::cout << vec[0].GetVal<jType::String>() << '\n';
+        std::cout << vec[1].GetVal<jType::Float>() << '\n';
+        std::cout << vec[2].GetVal<jType::Bool>() << '\n';
 
-        jValue json5 = jValue::makeObj({{"string", true}, {"hello", "world"}, {"12", 12.34}});
+        jValue json5 = jValue::MakeObj({{"string", true}, {"hello", "world"}, {"12", 12.34}});
     }
     catch (std::exception &e)
     {
@@ -84,15 +84,15 @@ void test_json_types2()
     }
 }
 
-void test_json_types3()
+void TestJsonTypes3()
 {
     jValue jv1("json");
     jValue jv2(12.323);
     jValue jv3(100);
-    jValue jv4 = jValue::makeArr({jv1, jv2, jv3});
-    jValue jv5 = jValue::makeObj({{"first", 12}, {"second", nullptr}, {"third", jv4}});
+    jValue jv4 = jValue::MakeArr({jv1, jv2, jv3});
+    jValue jv5 = jValue::MakeObj({{"first", 12}, {"second", nullptr}, {"third", jv4}});
 
-    jValue jv6 = jValue::makeObj({{"object", jv5}, {"array", jv4}});
+    jValue jv6 = jValue::MakeObj({{"object", jv5}, {"array", jv4}});
 
     jValue jv7(nullptr);
 
@@ -105,12 +105,12 @@ void test_json_types3()
     // std::cout << jv7 << '\n';
 
     jValue jv8(std::move(jv6));
-    std::cout << jv8.getType() << '\n';
+    std::cout << jv8.GetType() << '\n';
     jv8 = jv2;
-    std::cout << jv8.getType() << '\n';
+    std::cout << jv8.GetType() << '\n';
 }
 
-void convert_unicode_test()
+void ConvertUnicodeTest()
 {
     // try {
     //     std::string str("9f000");
@@ -121,24 +121,45 @@ void convert_unicode_test()
     // }
 
     std::string str("https://\\u4e00我知道这是\\uge中文字符\\u9fa5");
-    std::string ret = simpleJson::convert_unicode_escape(str);
+    std::string ret = simple_json::ConvertUnicodeEscape(str);
     std::cout << ret << '\n';
 }
 
-void lexer_test()
+void LexerTest()
 {
-    std::string jsonStr("True");
-    simpleJson::Lexer lexer(jsonStr);
+    try
+    {
+        std::string json_str("True");
+        simple_json::Lexer lexer(json_str);
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
 
-    // std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9ga5\\u4f00\"");
-    // std::string jsonStr(R"("\u4g00\u9fa5\u4f00")");
-    // simpleJson::Lexer lexer(jsonStr);
+    // try
+    // {
+    //     std::string jsonStr("\"你好，我是谁？\\u4e00, hello world.\\u9ga5\\u4f00\"");
+    //     std::string jsonStr(R"("\u4g00\u9fa5\u4f00")");
+    //     simpleJson::Lexer lexer(jsonStr);
+    // }
+    // catch (const std::exception &e)
+    // {
+    //     std::cout << e.what() << '\n';
+    // }
 
-    // std::string jsonStr("6.2e");
-    // simpleJson::Lexer lexer(jsonStr);
+    // try
+    // {
+    //     std::string jsonStr("6.2e");
+    //     simpleJson::Lexer lexer(jsonStr);
+    // }
+    // catch (const std::exception &e)
+    // {
+    //     std::cout << e.what() << '\n';
+    // }
 }
 
-void errMsgs_test()
+void ErrMsgsTest()
 {
     try
     {
@@ -149,7 +170,7 @@ void errMsgs_test()
         //     "string: null
         // })");
 
-        simpleJson::Lexer lexer(read_test());
+        simple_json::Lexer lexer(ReadTest());
     }
     catch (const std::exception &e)
     {
@@ -157,10 +178,10 @@ void errMsgs_test()
     }
 }
 
-void line_split_test()
+void LineSplitTest()
 {
     std::cout << "行分割测试" << '\n';
-    simpleJson::Lexer lexer(R"({
+    simple_json::Lexer lexer(R"({
         "number": 12e-2,
         "literal": true,
         "string": "json"
@@ -168,15 +189,15 @@ void line_split_test()
 }
 
 // token流查看
-void token_stream_test()
+void TokenStreamTest()
 {
     try
     {
-        simpleJson::Lexer lexer(read_test());
-        simpleJson::JsonData &data = lexer._data;
-        for (const auto &token : data.tokens)
+        simple_json::Lexer lexer(ReadTest());
+        simple_json::JsonData &data = lexer.data_;
+        for (const auto &token : data.tokens_)
         {
-            std::cout << token.rawValue << '\n';
+            std::cout << token.raw_value_ << '\n';
         }
     }
     catch (const std::exception &e)
@@ -190,14 +211,14 @@ int main()
 #ifdef _WIN32
     SetConsoleOutputCP(65001);
 #endif
-    // std::cout << "hello JsonParser!" << '\n';
-    // test_json_types1();
-    // test_json_types2();
-    // test_json_types3();
-    // convert_unicode_test();
-    // lexer_test();
-    // errMsgs_test();
-    // line_split_test();
-    token_stream_test();
+    std::cout << "hello JsonParser!" << '\n';
+    // TestJsonTypes1();
+    // TestJsonTypes2();
+    // TestJsonTypes3();
+    // ConvertUnicodeTest();
+    // LexerTest();
+    ErrMsgsTest();
+    // LineSplitTest();
+    // TokenStreamTest();
     return 0;
 }

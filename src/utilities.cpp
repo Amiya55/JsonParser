@@ -1,9 +1,9 @@
 #include "utilities.h"
 #include <stdexcept>
 
-namespace simpleJson
+namespace simple_json
 {
-std::string encode_utf8(const unsigned long codepoint) noexcept
+std::string EncodeUtf8(const unsigned long codepoint) noexcept
 {
     std::string result;
     if (codepoint <= 0x7F)
@@ -36,7 +36,7 @@ std::string encode_utf8(const unsigned long codepoint) noexcept
     return result;
 }
 
-std::string convert_unicode_escape(const std::string &escape) noexcept
+std::string ConvertUnicodeEscape(const std::string &escape) noexcept
 {
     std::string result;
     result.reserve(escape.length());
@@ -53,7 +53,7 @@ std::string convert_unicode_escape(const std::string &escape) noexcept
                 if (failed_index == 4)
                 {
                     // 如果failed_index为4，就代表std::stoul解析的过程中没有出错
-                    result.append(encode_utf8(codepoint));
+                    result.append(EncodeUtf8(codepoint));
                 }
                 else
                 {
@@ -76,4 +76,4 @@ std::string convert_unicode_escape(const std::string &escape) noexcept
 
     return result;
 }
-} // namespace simpleJson
+} // namespace simple_json

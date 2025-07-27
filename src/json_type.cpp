@@ -1,7 +1,7 @@
 #include "json_type.h"
 #include <iostream>
 
-namespace simpleJson
+namespace simple_json
 {
 std::ostream &operator<<(std::ostream &os, const JsonType &type)
 {
@@ -35,33 +35,33 @@ std::ostream &operator<<(std::ostream &os, const JsonType &type)
 std::ostream &operator<<(std::ostream &os, const JsonValue &val)
 {
     // json对象和数组底层分别是哈希表和vector，这里我们就不打印出来了
-    const auto jsonObjectInfo = "Json Type: Json Object";
-    const auto jsonArrayInfo = "Json Type: Json Array";
+    const auto json_object_info = "Json Type: Json Object";
+    const auto json_array_info = "Json Type: Json Array";
 
-    switch (val._curType)
+    switch (val.cur_type_)
     {
     case JsonType::Object:
-        os << jsonObjectInfo;
+        os << json_object_info;
         break;
     case JsonType::Array:
-        os << jsonArrayInfo;
+        os << json_array_info;
         break;
     case JsonType::String:
-        os << std::get<std::string>(val._curVal);
+        os << std::get<std::string>(val.cur_val_);
         break;
     case JsonType::Bool:
-        os << std::get<bool>(val._curVal);
+        os << std::get<bool>(val.cur_val_);
         break;
     case JsonType::Int:
-        os << std::get<long long>(val._curVal);
+        os << std::get<long long>(val.cur_val_);
         break;
     case JsonType::Float:
-        os << std::get<long double>(val._curVal);
+        os << std::get<long double>(val.cur_val_);
         break;
     case JsonType::Null:
-        os << std::get<std::nullptr_t>(val._curVal);
+        os << std::get<std::nullptr_t>(val.cur_val_);
         break;
     }
     return os;
 }
-} // namespace simpleJson
+} // namespace simple_json

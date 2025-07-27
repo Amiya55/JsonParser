@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace simpleJson
+namespace simple_json
 {
 #ifndef ERR_TYPES
 #define ERR_TYPES
@@ -48,6 +48,6 @@ using enableIfJson =
 
 // 只允许字符串，包括字符串字面量，字符和std::string
 template <typename T> using enableIfString = std::enable_if_t<std::is_constructible_v<std::string, T>>;
-} // namespace simpleJson
+} // namespace simple_json
 
 #endif // CONFIG_H

@@ -1,28 +1,41 @@
-Checks: >
-  clang-analyzer-*,
-  bugprone-*,
-  modernize-*,
-  performance-*,
-  readability-*,
-  cppcoreguidelines-*,
-  -cppcoreguidelines-pro-type-vararg,
-  -cppcoreguidelines-owning-memory,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -readability-magic-numbers,
-  -clang-analyzer-optin.cplusplus.VirtualCall
-
-WarningsAsErrors: ''
-HeaderFilterRegex: '.*'
-AnalyzeTemporaryDtors: false
-FormatStyle: file
+---
+Checks:     '
+            bugprone-*,
+            clang-analyzer-*,
+            microsoft-*,
+            modernize-*,
+            performance-*,
+            portability-*,
+            readability-*,
+            -bugprone-easily-swappable-parameters,
+            -bugprone-implicit-widening-of-multiplication-result,
+            -bugprone-narrowing-conversions,
+            -bugprone-reserved-identifier,
+            -bugprone-signed-char-misuse,
+            -bugprone-suspicious-include,
+            -clang-analyzer-cplusplus.NewDelete,
+            -clang-analyzer-cplusplus.NewDeleteLeaks,
+            -clang-analyzer-security.insecureAPI.rand,
+            -clang-diagnostic-implicit-int-float-conversion,
+            -google-readability-avoid-underscore-in-googletest-name,
+            -modernize-avoid-c-arrays,
+            -modernize-use-trailing-return-type,
+            -readability-function-cognitive-complexity, # 禁用认知复杂度检查
+            -readability-convert-member-functions-to-static,
+            -readability-identifier-length,
+            -readability-magic-numbers,
+            -readability-qualified-auto,
+            '
 CheckOptions:
-  - key:             modernize-use-nullptr.NullMacros
-    value:           'NULL'
-  - key:             modernize-use-nullptr.NullptrMacros
-    value:           'nullptr'
-  - key:             modernize-use-trailing-return-type.MinTypeNameLength
-    value:           '5'
-  - key:             readability-identifier-naming.VariableCase
-    value:           camelCase
-  - key:             readability-identifier-naming.ClassCase
-    value:           PascalCase
+  - { key: readability-identifier-naming.ClassCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.EnumCase,            value: CamelCase  }
+  - { key: readability-identifier-naming.FunctionCase,        value: CamelCase  }
+  - { key: readability-identifier-naming.GlobalConstantCase,  value: UPPER_CASE }
+  - { key: readability-identifier-naming.MemberCase,          value: lower_case }
+  - { key: readability-identifier-naming.MemberSuffix,        value: _          }
+  - { key: readability-identifier-naming.NamespaceCase,       value: lower_case }
+  - { key: readability-identifier-naming.StructCase,          value: CamelCase  }
+  - { key: readability-identifier-naming.UnionCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.VariableCase,        value: lower_case }
+# WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'

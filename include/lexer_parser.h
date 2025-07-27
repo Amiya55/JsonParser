@@ -4,14 +4,15 @@
 #include "config.h"
 #include "json_type.h"
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
 
-namespace simpleJson
+namespace simple_json
 {
-enum class TokenType
+enum class TokenType : uint8_t
 {
     LBRACE,
     RBRACE,
@@ -29,13 +30,13 @@ enum class TokenType
 
 struct Token
 {
-    std::string rawValue;
-    TokenType type;
+    std::string raw_value_;
+    TokenType type_;
 
     // 记录token的位置
-    POS_T row;    // 所在行
-    POS_T col;    // 所在列
-    LENGTH_T len; // Token长度
+    POS_T row_;    // 所在行
+    POS_T col_;    // 所在列
+    LENGTH_T len_; // Token长度
 };
 
 // 原始json字符串和token流(经过词法分析器处理后得到)
@@ -43,26 +44,26 @@ struct Token
 // 所以我们将他们单独封装一下
 struct JsonData
 {
-    std::string source;                                  // 原始json字符串
-    std::map<POS_T, std::pair<POS_T, POS_T>> linesIndex; // 原始json字符串每一行的起始和结束偏移量
+    std::string source_;                                   // 原始json字符串
+    std::map<POS_T, std::pair<POS_T, POS_T>> lines_index_; // 原始json字符串每一行的起始和结束偏移量
 
-    std::vector<Token> tokens; // Token流
+    std::vector<Token> tokens_; // Token流
 };
 
 struct ErrInfo
 {
-    std::string errDesc;     // 错误描述
-    std::string currentLine; // 错误所在行
+    std::string err_desc_;     // 错误描述
+    std::string current_line_; // 错误所在行
 
-    POS_T row;
-    POS_T col;
-    LENGTH_T len; // 错误token长度，便于高亮打印
+    POS_T row_;
+    POS_T col_;
+    LENGTH_T len_; // 错误token长度，便于高亮打印
 };
 
 // 这个类用来存储词法，语法分析中检测到的各种错误
 class ErrReporter
 {
-    std::vector<ErrInfo> _errors;
+    std::vector<ErrInfo> errors_;
 
   public:
     ErrReporter() = default;
@@ -74,29 +75,29 @@ class ErrReporter
     ErrReporter &operator=(ErrReporter &&) = delete;
 
     template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, ErrInfo>>>
-    void addError(T &&errInfo)
+    void AddError(T &&errInfo)
     {
-        _errors.push_back(std::forward<T>(errInfo));
+        errors_.push_back(std::forward<T>(errInfo));
     }
 
-    [[nodiscard]] bool hasError() const noexcept;
-    void throwError(bool throwAll = false) const;
+    [[nodiscard]] bool HasError() const noexcept;
+    void ThrowError(bool throwAll = false) const;
 };
 
 class Lexer
 {
   public:
-    JsonData _data; // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
+    JsonData data_; // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
 
     template <typename T, typename = enableIfString<T>> explicit Lexer(T &&source)
     {
-        _data.source = std::forward<T>(source);
-        _splitLines();
-        _scan();
+        data_.source_ = std::forward<T>(source);
+        SplitLines();
+        Scan();
 
-        if (_errReporter.hasError())
+        if (err_reporter_.HasError())
         {
-            _errReporter.throwError(true);
+            err_reporter_.ThrowError(true);
         }
     }
     ~Lexer() = default;
@@ -107,10 +108,10 @@ class Lexer
     Lexer &operator=(Lexer &&) = delete;
 
   private:
-    ErrReporter _errReporter;
+    ErrReporter err_reporter_;
 
     // Dfa基本状态
-    enum class StringDfaStat
+    enum class StringDfaStat : uint8_t
     {
         STRING_START,
         IN_STRING,
@@ -120,7 +121,7 @@ class Lexer
         ERROR
     };
 
-    enum class NumberDfaStat
+    enum class NumberDfaStat : uint8_t
     {
         NUMBER_START,
         NUMBER_SIGN,
@@ -135,7 +136,7 @@ class Lexer
         ERROR
     };
 
-    enum class LiteralDfaStat
+    enum class LiteralDfaStat : uint8_t
     {
         LITERAL_START,
         LITERAL_END,
@@ -155,38 +156,38 @@ class Lexer
         NULL_L2
     };
 
-    POS_T _curIndex{0}; // 当前在原始json字符串中的索引
-    POS_T _curRow{0};   // 当前字符行
-    POS_T _curCol{0};   // 当前字符列
+    POS_T cur_index_{0}; // 当前在原始json字符串中的索引
+    POS_T cur_row_{0};   // 当前字符行
+    POS_T cur_col_{0};   // 当前字符列
 
-    void _splitLines() noexcept; // 标记原始json字符串中每行的起始位置和结束位置
-    void _scan();
+    void SplitLines() noexcept; // 标记原始json字符串中每行的起始位置和结束位置
+    void Scan();
 
-    [[nodiscard]] bool _tokenIsOver() const noexcept; // 判断一个token是否结束
-    [[nodiscard]] bool _isAtEnd() const noexcept;
-    [[nodiscard]] bool _isEndOfLine() const noexcept; // 判断一行是否结束
+    [[nodiscard]] bool TokenIsOver() const noexcept; // 判断一个token是否结束
+    [[nodiscard]] bool IsAtEnd() const noexcept;
+    [[nodiscard]] bool IsEndOfLine() const noexcept; // 判断一行是否结束
 
-    [[nodiscard]] char _current() const noexcept;
-    char _advance() noexcept;
+    [[nodiscard]] char Current() const noexcept;
+    char Advance() noexcept;
 
-    [[nodiscard]] Token _makeToken(std::string &&str, TokenType type) const noexcept;
+    [[nodiscard]] Token MakeToken(std::string &&str, TokenType type) const noexcept;
 
     // 以下函数都是_scan函数的子模块
-    bool _parseString(Token &returnToken, ErrInfo &errInfo);  // 解析json字符串
-    bool _parseNumber(Token &returnToken, ErrInfo &errInfo);  // 解析json数字
-    bool _parseLiteral(Token &returnToken, ErrInfo &errInfo); // 解析json字面量(true, false, null)
+    bool ParseString(Token &return_token, ErrInfo &err_info);  // 解析json字符串
+    bool ParseNumber(Token &return_token, ErrInfo &err_info);  // 解析json数字
+    bool ParseLiteral(Token &return_token, ErrInfo &err_info); // 解析json字面量(true, false, null)
 };
 
 class Parser
 {
   public:
-    JsonValue _json;
-    JsonData _jsonData;
+    JsonValue json_;
+    JsonData json_data_;
 
     template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay<T>, JsonData>>>
-    explicit Parser(T &&jsonData) : _jsonData(std::forward<T>(jsonData))
+    explicit Parser(T &&json_data) : json_data_(std::forward<T>(json_data))
     {
-        _parse();
+        Parse();
     }
     ~Parser() = default;
 
@@ -196,16 +197,16 @@ class Parser
     Parser &operator=(const Parser &&) = delete;
 
   private:
-    ErrReporter _errReporter;
+    ErrReporter err_reporter_;
 
-    void _parse() const noexcept; // 词法分析器入口
-    void _parseValue() const noexcept;
-    void _parseObject() const noexcept;
-    void _parseArray() const noexcept;
+    void Parse() const noexcept; // 词法分析器入口
+    void ParseValue() const noexcept;
+    void ParseObject() const noexcept;
+    void ParseArray() const noexcept;
 
-    [[nodiscard]] const Token &peek() const noexcept;
-    const Token &_advance() const noexcept;
+    [[nodiscard]] const Token &Peek() const noexcept;
+    [[nodiscard]] const Token &Advance() const noexcept;
 };
-} // namespace simpleJson
+} // namespace simple_json
 
 #endif // Lexer_Parser_H

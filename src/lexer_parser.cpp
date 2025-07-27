@@ -5,104 +5,113 @@
 #include <stdexcept>
 #include <string>
 
-namespace simpleJson
+namespace simple_json
 {
-bool ErrReporter::hasError() const noexcept
+bool ErrReporter::HasError() const noexcept
 {
-    return !_errors.empty();
+    return !errors_.empty();
 }
 
-void ErrReporter::throwError(const bool throwAll) const
+void ErrReporter::ThrowError(const bool throwAll) const
 {
-    if (!hasError())
-        return;
-
-    std::string errorPrintInfo;
-    const size_t errorCount = throwAll ? _errors.size() : 1;
-    for (size_t i = 0; i < errorCount; i++)
+    if (!HasError())
     {
-        const POS_T errRow = _errors[i].row + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
-        const POS_T errCol = _errors[i].col;
-
-        // 构建错误所在行信息
-        std::string errInfo("[Row: " + std::to_string(errRow) + ", Col: " + std::to_string(errCol) + "] " +
-                            _errors[i].errDesc + "\n");
-        std::string LineInfo(std::to_string(errRow) + " | " + _errors[i].currentLine);
-        errorPrintInfo.append(errInfo);
-        errorPrintInfo.append(LineInfo);
-
-        // 构建空格缩进
-        // 下面的errLineIndex是行号长度，数字3为字符串" | "长度，
-        // _messages[i].errToken.col为本行距离错误token首字符的长度，数字1为索引差值
-        std::string indent(std::to_string(errRow).length() + 3 + _errors[i].col - 1, ' ');
-        // 高亮错误token
-        std::string highlight(_errors[i].len, '~');
-        errorPrintInfo.append(indent + highlight);
-
-        // 构建分隔符
-        errorPrintInfo.append("\n- - - - - - - - - - -\n");
+        return;
     }
 
-    throw std::runtime_error(errorPrintInfo);
+    std::string error_print_info;
+    const size_t error_count = throwAll ? errors_.size() : 1;
+    for (size_t i = 0; i < error_count; i++)
+    {
+        const POS_T err_row = errors_[i].row_ + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
+        const POS_T err_col = errors_[i].col_;
+
+        // 构建错误所在行信息
+        std::string err_info("[Row: " + std::to_string(err_row) + ", Col: " + std::to_string(err_col) + "] " +
+                             errors_[i].err_desc_ + "\n");
+        std::string line_info(std::to_string(err_row) + " | " + errors_[i].current_line_);
+        if (line_info.back() != '\n')
+        {
+            // 如果末尾没有\n，则自动添加一个，否则可能造成打印格式错误
+            line_info.push_back('\n');
+        }
+
+        error_print_info.append(err_info);
+        error_print_info.append(line_info);
+
+        // 构建空格缩进
+        // 下面的err_row是行号长度，数字3为字符串" | "长度，errors_[i].col_为本行距离错误token首字符的长度
+        std::string indent(std::to_string(err_row).length() + 3 + errors_[i].col_, ' ');
+        // 高亮错误token
+        std::string highlight(errors_[i].len_, '~');
+        error_print_info.append(indent + highlight);
+
+        // 构建分隔符
+        error_print_info.append("\n- - - - - - - - - - -\n");
+    }
+
+    throw std::runtime_error(error_print_info);
 }
 
-void Lexer::_splitLines() noexcept
+void Lexer::SplitLines() noexcept
 {
     POS_T begin = 0;
-    POS_T curLineIndex = 0;
-    for (POS_T end = 0; end < _data.source.length(); ++end)
+    POS_T cur_line_index = 0;
+    for (POS_T end = 0; end < data_.source_.length(); ++end)
     {
-        if (_data.source[end] == '\n' || end == _data.source.length() - 1)
+        if (data_.source_[end] == '\n' || end == data_.source_.length() - 1)
         {
-            _data.linesIndex[curLineIndex] = std::make_pair(begin, end + 1);
+            data_.lines_index_[cur_line_index] = std::make_pair(begin, end + 1);
             begin = end + 1;
-            ++curLineIndex;
+            ++cur_line_index;
         }
     }
 }
 
-void Lexer::_scan()
+void Lexer::Scan()
 {
-    for (_curIndex = 0; _curIndex < _data.source.length();)
+    for (cur_index_ = 0; cur_index_ < data_.source_.length();)
     {
-        switch (_data.source[_curIndex])
+        switch (data_.source_[cur_index_])
         {
         case '{':
-            _data.tokens.push_back(_makeToken("{", TokenType::LBRACE));
-            _advance();
+            data_.tokens_.push_back(MakeToken("{", TokenType::LBRACE));
+            Advance();
             break;
         case '}':
-            _data.tokens.push_back(_makeToken("{", TokenType::RBRACE));
-            _advance();
+            data_.tokens_.push_back(MakeToken("{", TokenType::RBRACE));
+            Advance();
             break;
         case '[':
-            _data.tokens.push_back(_makeToken("[", TokenType::LBRACKET));
-            _advance();
+            data_.tokens_.push_back(MakeToken("[", TokenType::LBRACKET));
+            Advance();
             break;
         case ']':
-            _data.tokens.push_back(_makeToken("[", TokenType::RBRACKET));
-            _advance();
+            data_.tokens_.push_back(MakeToken("[", TokenType::RBRACKET));
+            Advance();
             break;
         case ',':
-            _data.tokens.push_back(_makeToken(",", TokenType::COMMA));
-            _advance();
+            data_.tokens_.push_back(MakeToken(",", TokenType::COMMA));
+            Advance();
             break;
         case ':':
-            _data.tokens.push_back(_makeToken(":", TokenType::COLON));
-            _advance();
+            data_.tokens_.push_back(MakeToken(":", TokenType::COLON));
+            Advance();
             break;
         case '\"': {
-            Token returnToken;
-            ErrInfo errInfo;
-            if (_parseString(returnToken, errInfo))
+            Token return_token;
+            ErrInfo err_info;
+            if (ParseString(return_token, err_info))
             {
-                _data.tokens.push_back(std::move(returnToken));
+                data_.tokens_.push_back(std::move(return_token));
             }
             else
             {
-                _errReporter.addError(std::move(errInfo));
-                while (!_tokenIsOver())
-                    _advance();
+                err_reporter_.AddError(std::move(err_info));
+                while (!TokenIsOver())
+                {
+                    Advance();
+                }
             }
         }
         break;
@@ -117,681 +126,685 @@ void Lexer::_scan()
         case '7':
         case '8':
         case '9': {
-            Token returnToken;
-            ErrInfo errInfo;
-            if (_parseNumber(returnToken, errInfo))
+            Token return_token;
+            ErrInfo err_info;
+            if (ParseNumber(return_token, err_info))
             {
-                _data.tokens.push_back(std::move(returnToken));
+                data_.tokens_.push_back(std::move(return_token));
             }
             else
             {
-                _errReporter.addError(std::move(errInfo));
-                while (!_tokenIsOver())
-                    _advance();
+                err_reporter_.AddError(std::move(err_info));
+                while (!TokenIsOver())
+                {
+                    Advance();
+                }
             }
             break;
         }
         case 't':
         case 'f':
         case 'n': {
-            Token returnToken;
-            ErrInfo errInfo;
-            if (_parseLiteral(returnToken, errInfo))
+            Token return_token;
+            ErrInfo err_info;
+            if (ParseLiteral(return_token, err_info))
             {
-                _data.tokens.push_back(std::move(returnToken));
+                data_.tokens_.push_back(std::move(return_token));
             }
             else
             {
-                _errReporter.addError(std::move(errInfo));
-                while (!_tokenIsOver())
-                    _advance();
+                err_reporter_.AddError(std::move(err_info));
+                while (!TokenIsOver())
+                {
+                    Advance();
+                }
             }
             break;
         }
         case '\n':
             // 额外添加分支处理换行符记录，这样不用在一开始将原始json字符串拆分，性能更好
-            ++_curRow;
-            _curCol = 0;
-            _advance();
+            ++cur_row_;
+            cur_col_ = 0;
+            Advance();
             break;
         default:
-            if (std::isspace(_data.source[_curIndex]))
+            if (std::isspace(data_.source_[cur_index_]) != 0)
             {
-                _advance();
+                Advance();
             }
             else
             {
                 // 初始化返回参数
-                const POS_T lineBegin = _data.linesIndex[_curRow].first;
-                const POS_T lineEnd = _data.linesIndex[_curRow].second;
-                ErrInfo errInfo = {ERR_UNKNOWN_VALUE, _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow,
-                                   _curCol, 0};
+                const POS_T line_begin = data_.lines_index_[cur_row_].first;
+                const POS_T line_end = data_.lines_index_[cur_row_].second;
+                ErrInfo err_info = {ERR_UNKNOWN_VALUE, data_.source_.substr(line_begin, line_end - line_begin),
+                                    cur_row_, cur_col_, 0};
 
                 // 找到token结束位置
                 LENGTH_T count = 0;
-                while (!_tokenIsOver())
+                while (!TokenIsOver())
                 {
-                    _advance();
+                    Advance();
                     ++count;
                 }
 
-                errInfo.len = count;
-                _errReporter.addError(std::move(errInfo));
+                err_info.len_ = count;
+                err_reporter_.AddError(std::move(err_info));
             }
         }
     }
 
     // 最后读完字符串添加一个EOF
-    _data.tokens.push_back(_makeToken("", TokenType::EOF_));
+    data_.tokens_.push_back(MakeToken("", TokenType::EOF_));
 }
 
-bool Lexer::_tokenIsOver() const noexcept
+bool Lexer::TokenIsOver() const noexcept
 {
-    const char curChar = _data.source[_curIndex];
-    return std::isspace(curChar) || curChar == ']' || curChar == '\0' || curChar == '}' || curChar == ',';
+    const char cur_char = data_.source_[cur_index_];
+    return std::isspace(cur_char) != 0 || cur_char == ']' || cur_char == '\0' || cur_char == '}' || cur_char == ',';
 }
 
-bool Lexer::_isAtEnd() const noexcept
+bool Lexer::IsAtEnd() const noexcept
 {
-    return _curIndex == _data.source.length();
+    return cur_index_ == data_.source_.length();
 }
 
-bool Lexer::_isEndOfLine() const noexcept
+bool Lexer::IsEndOfLine() const noexcept
 {
-    return _data.source[_curIndex] == '\n';
+    return data_.source_[cur_index_] == '\n';
 }
 
-char Lexer::_current() const noexcept
+char Lexer::Current() const noexcept
 {
-    return _data.source[_curIndex];
+    return data_.source_[cur_index_];
 }
 
-char Lexer::_advance() noexcept
+char Lexer::Advance() noexcept
 {
-    if (!_isAtEnd())
+    if (!IsAtEnd())
     {
-        ++_curCol;
-        return _data.source[++_curIndex];
+        ++cur_col_;
+        return data_.source_[++cur_index_];
     }
     return '\0';
 }
 
-Token Lexer::_makeToken(std::string &&str, TokenType type) const noexcept
+Token Lexer::MakeToken(std::string &&str, TokenType type) const noexcept
 {
-    const LENGTH_T tokenLen = str.length();
-    return {std::move(str), type, _curRow, _curCol, tokenLen};
+    const LENGTH_T token_len = str.length();
+    return {std::move(str), type, cur_row_, cur_col_, token_len};
 }
 
-bool Lexer::_parseString(Token &returnToken, ErrInfo &errInfo)
+bool Lexer::ParseString(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    returnToken = {"", TokenType::STR, _curRow, _curRow, 0};
-    const POS_T lineBegin = _data.linesIndex[_curRow].first;
-    const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
+    return_token = {"", TokenType::STR, cur_row_, cur_row_, 0};
+    const POS_T line_begin = data_.lines_index_[cur_row_].first;
+    const POS_T line_end = data_.lines_index_[cur_row_].second;
+    err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
 
-    StringDfaStat curStat = StringDfaStat::STRING_START;
+    StringDfaStat cur_stat = StringDfaStat::STRING_START;
     std::string unicode_buffer; // 暂时存储unicode转移序列
 
-    // 用于错误高亮打印，因为字符串有许多转义序列，无法直接将returnToken的长度等价于高亮长度，所以定义此变量用于高亮打印
-    LENGTH_T errorHighlightLen = 0;
+    // 用于错误高亮打印，因为字符串有许多转义序列，无法直接将return_token的长度等价于高亮长度，所以定义此变量用于高亮打印
+    LENGTH_T err_highlight_len = 0;
 
-    while (curStat != StringDfaStat::STRING_END && curStat != StringDfaStat::ERROR)
+    while (cur_stat != StringDfaStat::STRING_END && cur_stat != StringDfaStat::ERROR)
     {
-        if (_isEndOfLine())
+        if (IsEndOfLine())
         {
             // 在非StringDfaStat::STRING_END情况下结束一行，意味着json字符串没有被引号括起来
-            curStat = StringDfaStat::ERROR;
-            errInfo.errDesc = ERR_MISSING_QUOTATION_MARK;
+            cur_stat = StringDfaStat::ERROR;
+            err_info.err_desc_ = ERR_MISSING_QUOTATION_MARK;
             break;
         }
 
-        const char curChar = _current();
+        const char cur_char = Current();
 
-        switch (curStat)
+        switch (cur_stat)
         {
         case StringDfaStat::STRING_START:
-            if (curChar == '"')
+            if (cur_char == '"')
             {
-                curStat = StringDfaStat::IN_STRING;
+                cur_stat = StringDfaStat::IN_STRING;
             }
             else
             {
-                curStat = StringDfaStat::ERROR;
-                errInfo.errDesc = ERR_MISSING_QUOTATION_MARK;
+                cur_stat = StringDfaStat::ERROR;
+                err_info.err_desc_ = ERR_MISSING_QUOTATION_MARK;
             }
 
-            _advance();
+            Advance();
             break;
 
         case StringDfaStat::IN_STRING:
-            if (curChar == '"')
+            if (cur_char == '"')
             {
-                curStat = StringDfaStat::STRING_END;
+                cur_stat = StringDfaStat::STRING_END;
             }
-            else if (curChar == '\\')
+            else if (cur_char == '\\')
             {
-                curStat = StringDfaStat::STRING_ESCAPE;
+                cur_stat = StringDfaStat::STRING_ESCAPE;
             }
             else
             {
-                returnToken.rawValue += curChar;
+                return_token.raw_value_ += cur_char;
             }
 
-            ++errorHighlightLen;
-            _advance();
+            ++err_highlight_len;
+            Advance();
             break;
 
         case StringDfaStat::STRING_ESCAPE:
-            switch (curChar)
+            switch (cur_char)
             {
             case '\\':
-                returnToken.rawValue += '\\';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\\';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case '"':
-                returnToken.rawValue += '"';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '"';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case '/':
-                returnToken.rawValue += '/';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '/';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 'b':
-                returnToken.rawValue += '\b';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\b';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 'f':
-                returnToken.rawValue += '\f';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\f';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 'r':
-                returnToken.rawValue += '\r';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\r';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 'n':
-                returnToken.rawValue += '\n';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\n';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 't':
-                returnToken.rawValue += '\t';
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += '\t';
+                cur_stat = StringDfaStat::IN_STRING;
                 break;
             case 'u':
-                curStat = StringDfaStat::STRING_UNICODE_START;
+                cur_stat = StringDfaStat::STRING_UNICODE_START;
                 unicode_buffer = "\\u";
                 break;
             default:
-                curStat = StringDfaStat::ERROR;
-                errInfo.errDesc = ERR_INVALID_ESCAPE;
+                cur_stat = StringDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_ESCAPE;
                 break;
             }
 
-            errorHighlightLen += 2; // 一个"\"转义序列长度，例如"\n"
-            _advance();
+            err_highlight_len += 2; // 一个"\"转义序列长度，例如"\n"
+            Advance();
             break;
 
         case StringDfaStat::STRING_UNICODE_START:
             for (int i = 0; i < 4; ++i)
             {
-                if (_isEndOfLine())
+                if (IsEndOfLine())
                 {
-                    curStat = StringDfaStat::ERROR;
-                    errInfo.errDesc = ERR_INCOMPLETE_UNICODE_ESCAPE;
+                    cur_stat = StringDfaStat::ERROR;
+                    err_info.err_desc_ = ERR_INCOMPLETE_UNICODE_ESCAPE;
                     break;
                 }
 
-                if (std::isdigit(_current()) || (_current() >= 'a' && _current() <= 'f') ||
-                    (_current() >= 'A' && _current() <= 'F'))
+                if (const char cur = Current();
+                    std::isdigit(cur) != 0 || (cur >= 'a' && cur <= 'f') || (cur >= 'A' && cur <= 'F'))
                 {
-                    unicode_buffer += _current();
-                    _advance();
+                    unicode_buffer += cur;
+                    Advance();
                 }
                 else
                 {
-                    curStat = StringDfaStat::ERROR;
-                    errInfo.errDesc = ERR_INVALID_UNICODE_ESCAPE;
+                    cur_stat = StringDfaStat::ERROR;
+                    err_info.err_desc_ = ERR_INVALID_UNICODE_ESCAPE;
                     break;
                 }
             }
-            if (curStat != StringDfaStat::ERROR)
+            if (cur_stat != StringDfaStat::ERROR)
             {
-                returnToken.rawValue += convert_unicode_escape(unicode_buffer);
-                curStat = StringDfaStat::IN_STRING;
+                return_token.raw_value_ += ConvertUnicodeEscape(unicode_buffer);
+                cur_stat = StringDfaStat::IN_STRING;
             }
 
-            errorHighlightLen += 4; // 一个unicode序列长度，例如"4e00"
+            err_highlight_len += 4; // 一个unicode序列长度，例如"4e00"
             break;
         }
     }
 
-    returnToken.len = returnToken.rawValue.length();
-    errInfo.len = errorHighlightLen;
+    return_token.len_ = return_token.raw_value_.length();
+    err_info.len_ = err_highlight_len;
 
-    return curStat == StringDfaStat::STRING_END;
+    return cur_stat == StringDfaStat::STRING_END;
 }
 
-bool Lexer::_parseNumber(Token &returnToken, ErrInfo &errInfo)
+bool Lexer::ParseNumber(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    returnToken = {"", TokenType::NUM, _curRow, _curRow, 0};
-    const POS_T lineBegin = _data.linesIndex[_curRow].first;
-    const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
+    return_token = {"", TokenType::NUM, cur_row_, cur_row_, 0};
+    const POS_T line_begin = data_.lines_index_[cur_row_].first;
+    const POS_T line_end = data_.lines_index_[cur_row_].second;
+    err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
 
-    NumberDfaStat curStat = NumberDfaStat::NUMBER_START;
+    NumberDfaStat cur_stat = NumberDfaStat::NUMBER_START;
 
-    while (curStat != NumberDfaStat::NUMBER_END && curStat != NumberDfaStat::ERROR)
+    while (cur_stat != NumberDfaStat::NUMBER_END && cur_stat != NumberDfaStat::ERROR)
     {
-        const char curChar = _current();
-        if (_tokenIsOver())
+        const char cur_char = Current();
+        if (TokenIsOver())
         {
-            if (curStat == NumberDfaStat::NUMBER_ZERO || curStat == NumberDfaStat::NUMBER_INTEGRAL ||
-                curStat == NumberDfaStat::NUMBER_EXPONENT || curStat == NumberDfaStat::NUMBER_FRACTION)
+            if (cur_stat == NumberDfaStat::NUMBER_ZERO || cur_stat == NumberDfaStat::NUMBER_INTEGRAL ||
+                cur_stat == NumberDfaStat::NUMBER_EXPONENT || cur_stat == NumberDfaStat::NUMBER_FRACTION)
             {
-                curStat = NumberDfaStat::NUMBER_END;
+                cur_stat = NumberDfaStat::NUMBER_END;
             }
             else
             {
-                errInfo.errDesc = ERR_INCOMPLETE_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INCOMPLETE_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
         }
 
-        switch (curStat)
+        switch (cur_stat)
         {
         case NumberDfaStat::NUMBER_START:
-            if (curChar == '0')
+            if (cur_char == '0')
             {
-                curStat = NumberDfaStat::NUMBER_ZERO;
+                cur_stat = NumberDfaStat::NUMBER_ZERO;
             }
-            else if (curChar == '-')
+            else if (cur_char == '-')
             {
-                curStat = NumberDfaStat::NUMBER_SIGN;
+                cur_stat = NumberDfaStat::NUMBER_SIGN;
             }
-            else if (std::isdigit(curChar))
+            else if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                cur_stat = NumberDfaStat::NUMBER_INTEGRAL;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_ZERO:
-            if (curChar == '.')
+            if (cur_char == '.')
             {
-                curStat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
+                cur_stat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
             }
-            else if (curChar == 'e' || curChar == 'E')
+            else if (cur_char == 'e' || cur_char == 'E')
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_SIGN:
-            if (curChar == '0')
+            if (cur_char == '0')
             {
-                curStat = NumberDfaStat::NUMBER_ZERO;
+                cur_stat = NumberDfaStat::NUMBER_ZERO;
             }
-            else if (std::isdigit(curChar))
+            else if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                cur_stat = NumberDfaStat::NUMBER_INTEGRAL;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_INTEGRAL:
-            if (curChar == '.')
+            if (cur_char == '.')
             {
-                curStat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
+                cur_stat = NumberDfaStat::NUMBER_FRACTION_BEGIN;
             }
-            else if (curChar == 'e' || curChar == 'E')
+            else if (cur_char == 'e' || cur_char == 'E')
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
             }
-            else if (std::isdigit(curChar))
+            else if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_INTEGRAL;
+                cur_stat = NumberDfaStat::NUMBER_INTEGRAL;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_FRACTION_BEGIN:
-            if (std::isdigit(curChar))
+            if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_FRACTION;
+                cur_stat = NumberDfaStat::NUMBER_FRACTION;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_FRACTION:
-            if (curChar == 'e' || curChar == 'E')
+            if (cur_char == 'e' || cur_char == 'E')
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT_BEGIN;
             }
-            else if (std::isdigit(curChar))
+            else if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_FRACTION;
+                cur_stat = NumberDfaStat::NUMBER_FRACTION;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_EXPONENT_BEGIN:
-            if (curChar == '-')
+            if (cur_char == '-')
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT_SIGN;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT_SIGN;
             }
-            else if (std::isdigit(curChar))
+            else if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_EXPONENT_SIGN:
-            if (std::isdigit(curChar))
+            if (std::isdigit(cur_char) != 0)
             {
-                curStat = NumberDfaStat::NUMBER_EXPONENT;
+                cur_stat = NumberDfaStat::NUMBER_EXPONENT;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
 
         case NumberDfaStat::NUMBER_EXPONENT:
-            if (!std::isdigit(curChar))
+            if (std::isdigit(cur_char) == 0)
             {
-                errInfo.errDesc = ERR_INVALID_NUMBER;
-                curStat = NumberDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_NUMBER;
+                cur_stat = NumberDfaStat::ERROR;
             }
             break;
         }
-        returnToken.rawValue += curChar;
-        _advance();
+        return_token.raw_value_ += cur_char;
+        Advance();
     }
 
-    const POS_T tokenLen = returnToken.rawValue.length();
-    returnToken.len = tokenLen;
-    errInfo.len = tokenLen;
+    const POS_T token_len = return_token.raw_value_.length();
+    return_token.len_ = token_len;
+    err_info.len_ = token_len;
 
-    return curStat == NumberDfaStat::NUMBER_END;
+    return cur_stat == NumberDfaStat::NUMBER_END;
 }
 
-bool Lexer::_parseLiteral(Token &returnToken, ErrInfo &errInfo)
+bool Lexer::ParseLiteral(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    returnToken = {"", TokenType::TRUE, _curRow, _curRow, 0};
-    const POS_T lineBegin = _data.linesIndex[_curRow].first;
-    const POS_T lineEnd = _data.linesIndex[_curRow].second;
-    errInfo = {"", _data.source.substr(lineBegin, lineEnd - lineBegin), _curRow, _curCol, 0};
+    return_token = {"", TokenType::TRUE, cur_row_, cur_row_, 0};
+    const POS_T line_begin = data_.lines_index_[cur_row_].first;
+    const POS_T line_end = data_.lines_index_[cur_row_].second;
+    err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
 
-    LiteralDfaStat curStat = LiteralDfaStat::LITERAL_START;
+    LiteralDfaStat cur_stat = LiteralDfaStat::LITERAL_START;
 
-    while (curStat != LiteralDfaStat::LITERAL_END && curStat != LiteralDfaStat::ERROR)
+    while (cur_stat != LiteralDfaStat::LITERAL_END && cur_stat != LiteralDfaStat::ERROR)
     {
         // 已经到达行结尾，但是字面量没有到最后一个字符，则认为字面量不完整
-        if (_isEndOfLine() && curStat != LiteralDfaStat::TRUE_E && curStat != LiteralDfaStat::FALSE_E &&
-            curStat != LiteralDfaStat::NULL_L2)
+        if (IsEndOfLine() && cur_stat != LiteralDfaStat::TRUE_E && cur_stat != LiteralDfaStat::FALSE_E &&
+            cur_stat != LiteralDfaStat::NULL_L2)
         {
-            curStat = LiteralDfaStat::ERROR;
-            errInfo.errDesc = ERR_INVALID_LITERAL;
+            cur_stat = LiteralDfaStat::ERROR;
+            err_info.err_desc_ = ERR_INVALID_LITERAL;
             break;
         }
 
-        const char curChar = _current();
+        const char cur_char = Current();
 
-        switch (curStat)
+        switch (cur_stat)
         {
         case LiteralDfaStat::LITERAL_START:
-            if (curChar == 't')
+            if (cur_char == 't')
             {
-                returnToken.type = TokenType::TRUE;
-                curStat = LiteralDfaStat::TRUE_T;
+                return_token.type_ = TokenType::TRUE;
+                cur_stat = LiteralDfaStat::TRUE_T;
             }
-            else if (curChar == 'f')
+            else if (cur_char == 'f')
             {
-                returnToken.type = TokenType::FALSE;
-                curStat = LiteralDfaStat::FALSE_F;
+                return_token.type_ = TokenType::FALSE;
+                cur_stat = LiteralDfaStat::FALSE_F;
             }
-            else if (curChar == 'n')
+            else if (cur_char == 'n')
             {
-                returnToken.type = TokenType::NULL_;
-                curStat = LiteralDfaStat::NULL_N;
+                return_token.type_ = TokenType::NULL_;
+                cur_stat = LiteralDfaStat::NULL_N;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL;
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL;
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::TRUE_T:
-            if (curChar == 'r')
+            if (cur_char == 'r')
             {
-                curStat = LiteralDfaStat::TRUE_R;
+                cur_stat = LiteralDfaStat::TRUE_R;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::TRUE_R:
-            if (curChar == 'u')
+            if (cur_char == 'u')
             {
-                curStat = LiteralDfaStat::TRUE_U;
+                cur_stat = LiteralDfaStat::TRUE_U;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::TRUE_U:
-            if (curChar == 'e')
+            if (cur_char == 'e')
             {
-                curStat = LiteralDfaStat::TRUE_E;
+                cur_stat = LiteralDfaStat::TRUE_E;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::TRUE_E:
-            if (_tokenIsOver())
+            if (TokenIsOver())
             {
-                curStat = LiteralDfaStat::LITERAL_END;
+                cur_stat = LiteralDfaStat::LITERAL_END;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_TRUE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
             break;
 
         case LiteralDfaStat::FALSE_F:
-            if (curChar == 'a')
+            if (cur_char == 'a')
             {
-                curStat = LiteralDfaStat::FALSE_A;
+                cur_stat = LiteralDfaStat::FALSE_A;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::FALSE_A:
-            if (curChar == 'l')
+            if (cur_char == 'l')
             {
-                curStat = LiteralDfaStat::FALSE_L;
+                cur_stat = LiteralDfaStat::FALSE_L;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::FALSE_L:
-            if (curChar == 's')
+            if (cur_char == 's')
             {
-                curStat = LiteralDfaStat::FALSE_S;
+                cur_stat = LiteralDfaStat::FALSE_S;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::FALSE_S:
-            if (curChar == 'e')
+            if (cur_char == 'e')
             {
-                curStat = LiteralDfaStat::FALSE_E;
+                cur_stat = LiteralDfaStat::FALSE_E;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::FALSE_E:
-            if (_tokenIsOver())
+            if (TokenIsOver())
             {
-                curStat = LiteralDfaStat::LITERAL_END;
+                cur_stat = LiteralDfaStat::LITERAL_END;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_FALSE);
+                cur_stat = LiteralDfaStat::ERROR;
             }
             break;
 
         case LiteralDfaStat::NULL_N:
-            if (curChar == 'u')
+            if (cur_char == 'u')
             {
-                curStat = LiteralDfaStat::NULL_U;
+                cur_stat = LiteralDfaStat::NULL_U;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::NULL_U:
-            if (curChar == 'l')
+            if (cur_char == 'l')
             {
-                curStat = LiteralDfaStat::NULL_L1;
+                cur_stat = LiteralDfaStat::NULL_L1;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::NULL_L1:
-            if (curChar == 'l')
+            if (cur_char == 'l')
             {
-                curStat = LiteralDfaStat::NULL_L2;
+                cur_stat = LiteralDfaStat::NULL_L2;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                cur_stat = LiteralDfaStat::ERROR;
             }
 
-            returnToken.rawValue += curChar;
-            _advance();
+            return_token.raw_value_ += cur_char;
+            Advance();
             break;
 
         case LiteralDfaStat::NULL_L2:
-            if (_tokenIsOver())
+            if (TokenIsOver())
             {
-                curStat = LiteralDfaStat::LITERAL_END;
+                cur_stat = LiteralDfaStat::LITERAL_END;
             }
             else
             {
-                errInfo.errDesc = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
-                curStat = LiteralDfaStat::ERROR;
+                err_info.err_desc_ = ERR_INVALID_LITERAL + std::string(LITERAL_GUESS_NULL);
+                cur_stat = LiteralDfaStat::ERROR;
             }
             break;
         }
     }
 
-    const POS_T tokenLen = returnToken.rawValue.length();
-    returnToken.len = tokenLen;
-    errInfo.len = tokenLen;
+    const POS_T token_len = return_token.raw_value_.length();
+    return_token.len_ = token_len;
+    err_info.len_ = token_len;
 
-    return curStat == LiteralDfaStat::LITERAL_END;
+    return cur_stat == LiteralDfaStat::LITERAL_END;
 }
 
-} // namespace simpleJson
+} // namespace simple_json
