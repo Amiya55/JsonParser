@@ -10,6 +10,9 @@
 #include <windows.h>
 #endif
 
+namespace
+{
+
 using jValue = simple_json::JsonValue;
 using jType = simple_json::JsonType;
 
@@ -194,7 +197,7 @@ void TokenStreamTest()
     try
     {
         simple_json::Lexer lexer(ReadTest());
-        simple_json::JsonData &data = lexer.data_;
+        const simple_json::JsonData &data = lexer.GetToken();
         for (const auto &token : data.tokens_)
         {
             std::cout << token.raw_value_ << '\n';
@@ -206,12 +209,14 @@ void TokenStreamTest()
     }
 }
 
+} // namespace
+
 int main()
 {
 #ifdef _WIN32
     SetConsoleOutputCP(65001);
 #endif
-    std::cout << "hello JsonParser!" << '\n';
+    // std::cout << "hello JsonParser!" << '\n';
     // TestJsonTypes1();
     // TestJsonTypes2();
     // TestJsonTypes3();

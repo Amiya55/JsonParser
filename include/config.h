@@ -25,7 +25,14 @@ namespace simple_json
 #define LITERAL_GUESS_FALSE ", may be you mean false?" // 字面量猜测，false
 #define LITERAL_GUESS_NULL ", may be you mean null?"   // 字面量猜测，null
 
-#define ERR_UNKNOWN_VALUE "Unknown json value" // 无法识别的json数据类型
+#define ERR_UNKNOWN_VALUE "Unknown json value" // 错误提示，无法识别的json数据类型
+
+#define ERR_MISMATCH_TOP_LEVEL "Json top level should be object or array" // 错误提示，json顶层必须为对象或者数组
+
+#define ERR_TYPE_NOT_OBJECT "It is not a json object" // 错误提示，类型与json对象不匹配
+#define ERR_TYPE_NOT_ARRAY "It is not a json array"   // 错误提示，类型与json数组不匹配
+
+#define ERR_COLON_EXPECTED "Expected a colon after key"
 #endif
 
 #ifndef POS_T

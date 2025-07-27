@@ -87,8 +87,6 @@ class ErrReporter
 class Lexer
 {
   public:
-    JsonData data_; // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
-
     template <typename T, typename = enableIfString<T>> explicit Lexer(T &&source)
     {
         data_.source_ = std::forward<T>(source);
@@ -107,8 +105,11 @@ class Lexer
     Lexer &operator=(const Lexer &) = delete;
     Lexer &operator=(Lexer &&) = delete;
 
+    [[nodiscard]] JsonData &GetToken() noexcept;
+
   private:
-    ErrReporter err_reporter_;
+    JsonData data_;            // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
+    ErrReporter err_reporter_; // 错误处理模块
 
     // Dfa基本状态
     enum class StringDfaStat : uint8_t
@@ -181,13 +182,16 @@ class Lexer
 class Parser
 {
   public:
-    JsonValue json_;
-    JsonData json_data_;
-
     template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay<T>, JsonData>>>
     explicit Parser(T &&json_data) : json_data_(std::forward<T>(json_data))
     {
         Parse();
+
+        // 如果有错误信息，直接抛异常
+        if (err_reporter_.HasError())
+        {
+            err_reporter_.ThrowError(true);
+        }
     }
     ~Parser() = default;
 
@@ -197,15 +201,21 @@ class Parser
     Parser &operator=(const Parser &&) = delete;
 
   private:
-    ErrReporter err_reporter_;
+    JsonValue json_;           // 经过语法分析器构建的json数据结构
+    JsonData json_data_;       // 从词法分析器拿到的json原始字符窜，token流和行偏移量
+    ErrReporter err_reporter_; // 错误处理模块
 
-    void Parse() const noexcept; // 词法分析器入口
-    void ParseValue() const noexcept;
-    void ParseObject() const noexcept;
-    void ParseArray() const noexcept;
+    size_t cur_token_index_{0};
 
-    [[nodiscard]] const Token &Peek() const noexcept;
-    [[nodiscard]] const Token &Advance() const noexcept;
+    void Parse() noexcept; // 词法分析器入口
+    [[nodiscard]] JsonValue ParseValue() noexcept;
+    [[nodiscard]] JsonValue ParseObject() noexcept;
+    [[nodiscard]] JsonValue ParseArray() noexcept;
+
+    [[nodiscard]] const Token *Current() const noexcept;
+    [[nodiscard]] const Token *Advance() noexcept;
+    [[nodiscard]] bool Consume(TokenType token_type,
+                               std::string err_desc) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
 };
 } // namespace simple_json
 

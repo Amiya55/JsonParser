@@ -1,5 +1,6 @@
 #include "lexer_parser.h"
 #include "config.h"
+#include "json_type.h"
 #include "utilities.h"
 
 #include <stdexcept>
@@ -51,6 +52,11 @@ void ErrReporter::ThrowError(const bool throwAll) const
     }
 
     throw std::runtime_error(error_print_info);
+}
+
+JsonData &Lexer::GetToken() noexcept
+{
+    return data_;
 }
 
 void Lexer::SplitLines() noexcept
@@ -805,6 +811,76 @@ bool Lexer::ParseLiteral(Token &return_token, ErrInfo &err_info)
     err_info.len_ = token_len;
 
     return cur_stat == LiteralDfaStat::LITERAL_END;
+}
+
+void Parser::Parse() noexcept
+{
+    // 因为json顶层必须是对象或者数据，所以第一个json token肯定是"{"或者"]"
+    if (const Token *cur_token = Current(); cur_token->type_ == TokenType::LBRACKET)
+    {
+        json_ = ParseObject();
+    }
+    else if (cur_token->type_ == TokenType::LBRACKET)
+    {
+        json_ = ParseArray();
+    }
+    else
+    {
+        // 顶层不是对象或者数组，构建错误信息，准备抛异常
+        const POS_T line_begin = json_data_.lines_index_[cur_token->row_].first;
+        const POS_T line_end = json_data_.lines_index_[cur_token->row_].second;
+        ErrInfo err_info{ERR_MISMATCH_TOP_LEVEL, json_data_.source_.substr(line_begin, line_end - line_begin),
+                         cur_token->row_, cur_token->col_, cur_token->len_};
+        err_reporter_.AddError(std::move(err_info));
+    }
+
+} // namespace simple_json
+
+JsonValue Parser::ParseValue() noexcept
+{
+    switch (const Token *cur_token = Current(); cur_token->type_)
+    {
+    }
+}
+
+JsonValue Parser::ParseObject() noexcept
+{
+}
+
+JsonValue Parser::ParseArray() noexcept
+{
+}
+
+const Token *Parser::Current() const noexcept
+{
+    if (cur_token_index_ < json_data_.tokens_.size())
+    {
+        return &json_data_.tokens_[cur_token_index_];
+    }
+    return nullptr;
+}
+
+const Token *Parser::Advance() noexcept
+{
+    if (cur_token_index_ + 1 < json_data_.tokens_.size())
+    {
+        return &json_data_.tokens_[++cur_token_index_];
+    }
+    return nullptr;
+}
+
+bool Parser::Consume(TokenType token_type, std::string err_desc) noexcept
+{
+    if (const Token *cur_token = Current(); cur_token->type_ != token_type)
+    {
+        const POS_T line_begin = json_data_.lines_index_[cur_token->row_].first;
+        const POS_T line_end = json_data_.lines_index_[cur_token->row_].second;
+        ErrInfo err_info{std::move(err_desc), json_data_.source_.substr(line_begin, line_end - line_begin),
+                         cur_token->row_, cur_token->col_, cur_token->len_};
+        err_reporter_.AddError(std::move(err_info));
+        return false;
+    }
+    return true;
 }
 
 } // namespace simple_json
