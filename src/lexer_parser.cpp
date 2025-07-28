@@ -3,6 +3,7 @@
 #include "json_type.h"
 #include "utilities.h"
 
+#include <cctype>
 #include <stdexcept>
 #include <string>
 
@@ -174,7 +175,8 @@ void Lexer::Scan()
             Advance();
             break;
         default:
-            if (std::isspace(data_.source_[cur_index_]) != 0)
+            // windows下，如果不加是否是ascii字符的判断，并且读取到了json文件中的非ascii字符，此时使用isspace会导致程序崩溃
+            if (IsAscii(data_.source_[cur_index_]) && std::isspace(data_.source_[cur_index_]) != 0)
             {
                 Advance();
             }
@@ -188,7 +190,7 @@ void Lexer::Scan()
 
                 // 找到token结束位置
                 LENGTH_T count = 0;
-                while (!TokenIsOver())
+                while (!IsAscii(data_.source_[cur_index_]) || !TokenIsOver())
                 {
                     Advance();
                     ++count;

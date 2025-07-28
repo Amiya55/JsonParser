@@ -1,4 +1,5 @@
 #include "utilities.h"
+#include <cctype>
 #include <stdexcept>
 
 namespace simple_json
@@ -76,4 +77,10 @@ std::string ConvertUnicodeEscape(const std::string &escape) noexcept
 
     return result;
 }
+
+bool IsAscii(int ch) noexcept
+{
+    return static_cast<unsigned>(ch) < 0x80;
+}
+
 } // namespace simple_json
