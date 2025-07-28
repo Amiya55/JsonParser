@@ -215,8 +215,12 @@ class Parser
 
     [[nodiscard]] const Token *Current() const noexcept;
     Token *Advance() noexcept;
-    [[nodiscard]] bool Consume(TokenType token_type,
-                               std::string err_desc) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
+    [[nodiscard]] bool Consume(TokenType token_type) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
+
+    // 构建错误信息
+    void MakeErrInfo(std::string err_desc, const Token *cur_token) noexcept;
+    // 解析器进入恐慌模式，消耗token直到找到了",", "]"或者"}"
+    void Synchronize() noexcept;
 };
 } // namespace simple_json
 
