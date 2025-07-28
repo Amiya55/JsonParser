@@ -865,11 +865,6 @@ bool Parser::ParseValue(JsonValue &return_value) noexcept
         return_value = {nullptr};
         return true;
     default:
-        const POS_T line_begin = json_data_.lines_index_[cur_token->row_].first;
-        const POS_T line_end = json_data_.lines_index_[cur_token->row_].second;
-        ErrInfo err_info{ERR_EXPECTED_JSON_VALUE_TYPE, json_data_.source_.substr(line_begin, line_end - line_begin),
-                         cur_token->row_, cur_token->col_, cur_token->len_};
-        err_reporter_.AddError(std::move(err_info));
         return false;
     }
 }
@@ -900,12 +895,8 @@ JsonValue Parser::ParseObject() noexcept
                 {
                     MakeErrInfo(ERR_TRAILING_COMMA, Prev());
                 }
-                continue;
             }
-            else if (cur_token->type_ == TokenType::LBRACE)
-            {
-                break;
-            }
+            continue;
         }
         key = Current()->raw_value_;
         Advance();
@@ -923,19 +914,26 @@ JsonValue Parser::ParseObject() noexcept
                 {
                     MakeErrInfo(ERR_TRAILING_COMMA, Prev());
                 }
-                continue;
             }
-            else if (cur_token->type_ == TokenType::LBRACE)
-            {
-                break;
-            }
+            continue;
         }
         Advance();
 
         JsonValue value; // 键对应的值
         if (!ParseValue(value))
         {
-            return {ret_object};
+            MakeErrInfo(ERR_EXPECTED_JSON_VALUE_TYPE, Current());
+
+            Synchronize();
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            {
+                Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+            }
+            continue;
         }
         ret_object[key] = std::move(value);
         Advance();
@@ -959,21 +957,15 @@ JsonValue Parser::ParseObject() noexcept
                 {
                     MakeErrInfo(ERR_TRAILING_COMMA, Prev());
                 }
-                continue;
             }
-            else if (cur_token->type_ == TokenType::LBRACE)
-            {
-                break;
-            }
+            continue;
         }
-        else
+
+        // 如果当前是逗号，那么检查是否为尾随逗号
+        Advance();
+        if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
         {
-            // 如果当前是逗号，那么检查是否为尾随逗号
-            Advance();
-            if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
-            {
-                MakeErrInfo(ERR_TRAILING_COMMA, Prev());
-            }
+            MakeErrInfo(ERR_TRAILING_COMMA, Prev());
         }
     }
 
@@ -1002,7 +994,18 @@ JsonValue Parser::ParseArray() noexcept
         JsonValue return_value;
         if (!ParseValue(return_value))
         {
-            return {ret_array};
+            MakeErrInfo(ERR_EXPECTED_JSON_VALUE_TYPE, Current());
+
+            Synchronize();
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            {
+                Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+            }
+            continue;
         }
         ret_array.push_back(std::move(return_value));
         Advance();
@@ -1015,6 +1018,7 @@ JsonValue Parser::ParseArray() noexcept
 
         if (!Consume(TokenType::COMMA))
         {
+            // 如果当前的token不是逗号，那么存在语法错误，进入恐慌模式
             MakeErrInfo(ERR_COMMA_EXPECTED, Current());
 
             Synchronize();
@@ -1025,20 +1029,15 @@ JsonValue Parser::ParseArray() noexcept
                 {
                     MakeErrInfo(ERR_TRAILING_COMMA, Prev());
                 }
-                continue;
             }
-            else if (cur_token->type_ == TokenType::RBRACKET)
-            {
-                break;
-            }
+            continue;
         }
-        else
+
+        // 如果当前的语法没问题，成功解析了逗号，那么直接判断逗号是不是尾随逗号
+        Advance();
+        if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
         {
-            Advance();
-            if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
-            {
-                MakeErrInfo(ERR_TRAILING_COMMA, Prev());
-            }
+            MakeErrInfo(ERR_TRAILING_COMMA, Prev());
         }
     }
 
