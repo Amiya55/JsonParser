@@ -32,7 +32,19 @@ namespace simple_json
 #define ERR_TYPE_NOT_OBJECT "It is not a json object" // 错误提示，类型与json对象不匹配
 #define ERR_TYPE_NOT_ARRAY "It is not a json array"   // 错误提示，类型与json数组不匹配
 
-#define ERR_COLON_EXPECTED "Expected a colon after key"
+#define ERR_EXPECTED_JSON_VALUE_TYPE "Expexted a valid json value type here" // 错误提示，此处需要一个合法的json值类型
+#define ERR_COLON_EXPECTED "Expected a colon after key"                      // 错误提示，此处需要一个冒号:
+#define ERR_COMMA_EXPECTED "Expected a comma here"                           // 错误提示，此处需要一个逗号
+#define ERR_TRALING_COMMA "Traling comma is not allowed in json"             // 错误提示，尾随逗号错误
+#define ERR_OBJECT_NOT_CLOSED "json object not closed"                       // 错误提示，json对象未闭合
+#define ERR_ARRAY_NOT_CLOSED "json array not closed"                         // 错误提示，json数组未闭合
+#define ERR_OBJECT_KEY_MUST_BE_STRING "object key must be string"            // 错误提示，对象的键必须为字符串
+
+#endif
+
+// json扩展规则
+#ifndef JSON_EXTENSION
+#define ALLOW_TRALING_COMMA false // 允许尾随逗号
 #endif
 
 #ifndef POS_T

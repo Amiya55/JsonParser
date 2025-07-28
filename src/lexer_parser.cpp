@@ -42,7 +42,7 @@ void ErrReporter::ThrowError(const bool throwAll) const
 
         // 构建空格缩进
         // 下面的err_row是行号长度，数字3为字符串" | "长度，errors_[i].col_为本行距离错误token首字符的长度
-        std::string indent(std::to_string(err_row).length() + 3 + errors_[i].col_, ' ');
+        std::string indent(std::to_string(err_row).length() + 3 + errors_[i].col_ - 1, ' ');
         // 高亮错误token
         std::string highlight(errors_[i].len_, '~');
         error_print_info.append(indent + highlight);
@@ -85,7 +85,7 @@ void Lexer::Scan()
             Advance();
             break;
         case '}':
-            data_.tokens_.push_back(MakeToken("{", TokenType::RBRACE));
+            data_.tokens_.push_back(MakeToken("}", TokenType::RBRACE));
             Advance();
             break;
         case '[':
@@ -93,7 +93,7 @@ void Lexer::Scan()
             Advance();
             break;
         case ']':
-            data_.tokens_.push_back(MakeToken("[", TokenType::RBRACKET));
+            data_.tokens_.push_back(MakeToken("]", TokenType::RBRACKET));
             Advance();
             break;
         case ',':
@@ -207,7 +207,8 @@ void Lexer::Scan()
 bool Lexer::TokenIsOver() const noexcept
 {
     const char cur_char = data_.source_[cur_index_];
-    return std::isspace(cur_char) != 0 || cur_char == ']' || cur_char == '\0' || cur_char == '}' || cur_char == ',';
+    return std::isspace(cur_char) != 0 || cur_char == ']' || cur_char == '\0' || cur_char == '}' || cur_char == ',' ||
+           cur_char == ':';
 }
 
 bool Lexer::IsAtEnd() const noexcept
@@ -244,7 +245,7 @@ Token Lexer::MakeToken(std::string &&str, TokenType type) const noexcept
 bool Lexer::ParseString(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    return_token = {"", TokenType::STR, cur_row_, cur_row_, 0};
+    return_token = {"", TokenType::STR, cur_row_, cur_col_, 0};
     const POS_T line_begin = data_.lines_index_[cur_row_].first;
     const POS_T line_end = data_.lines_index_[cur_row_].second;
     err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
@@ -393,7 +394,7 @@ bool Lexer::ParseString(Token &return_token, ErrInfo &err_info)
 bool Lexer::ParseNumber(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    return_token = {"", TokenType::NUM, cur_row_, cur_row_, 0};
+    return_token = {"", TokenType::NUM, cur_row_, cur_col_, 0};
     const POS_T line_begin = data_.lines_index_[cur_row_].first;
     const POS_T line_end = data_.lines_index_[cur_row_].second;
     err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
@@ -570,7 +571,7 @@ bool Lexer::ParseNumber(Token &return_token, ErrInfo &err_info)
 bool Lexer::ParseLiteral(Token &return_token, ErrInfo &err_info)
 {
     // 初始化返回参数
-    return_token = {"", TokenType::TRUE, cur_row_, cur_row_, 0};
+    return_token = {"", TokenType::TRUE, cur_row_, cur_col_, 0};
     const POS_T line_begin = data_.lines_index_[cur_row_].first;
     const POS_T line_end = data_.lines_index_[cur_row_].second;
     err_info = {"", data_.source_.substr(line_begin, line_end - line_begin), cur_row_, cur_col_, 0};
@@ -816,7 +817,7 @@ bool Lexer::ParseLiteral(Token &return_token, ErrInfo &err_info)
 void Parser::Parse() noexcept
 {
     // 因为json顶层必须是对象或者数据，所以第一个json token肯定是"{"或者"]"
-    if (const Token *cur_token = Current(); cur_token->type_ == TokenType::LBRACKET)
+    if (const Token *cur_token = Current(); cur_token->type_ == TokenType::LBRACE)
     {
         json_ = ParseObject();
     }
@@ -836,19 +837,196 @@ void Parser::Parse() noexcept
 
 } // namespace simple_json
 
-JsonValue Parser::ParseValue() noexcept
+bool Parser::ParseValue(JsonValue &return_value) noexcept
 {
     switch (const Token *cur_token = Current(); cur_token->type_)
     {
+    case TokenType::LBRACE:
+        return_value = ParseObject();
+        return true;
+    case TokenType::LBRACKET:
+        return_value = ParseArray();
+        return true;
+    case TokenType::STR:
+        return_value = {cur_token->raw_value_};
+        return true;
+    case TokenType::NUM:
+        return_value = ParseNumber();
+        return true;
+    case TokenType::TRUE:
+        return_value = {true};
+        return true;
+    case TokenType::FALSE:
+        return_value = {false};
+        return true;
+    case TokenType::NULL_:
+        return_value = {nullptr};
+        return true;
+    default:
+        const POS_T line_begin = json_data_.lines_index_[cur_token->row_].first;
+        const POS_T line_end = json_data_.lines_index_[cur_token->row_].second;
+        ErrInfo err_info{ERR_EXPECTED_JSON_VALUE_TYPE, json_data_.source_.substr(line_begin, line_end - line_begin),
+                         cur_token->row_, cur_token->col_, cur_token->len_};
+        err_reporter_.AddError(std::move(err_info));
+        return false;
     }
 }
 
 JsonValue Parser::ParseObject() noexcept
 {
+    std::unordered_map<std::string, JsonValue> ret_object;
+    if (!Consume(TokenType::LBRACE, ERR_TYPE_NOT_OBJECT))
+    {
+        return {ret_object};
+    }
+    Advance();
+
+    // 处理空对象
+    if (Current()->type_ == TokenType::RBRACE)
+    {
+        Advance();
+        return {ret_object};
+    }
+
+    while (Current()->type_ != TokenType::EOF_)
+    {
+        std::string key;
+        // json对象的键必须为字符串
+        if (!Consume(TokenType::STR, ERR_OBJECT_KEY_MUST_BE_STRING))
+        {
+            return ret_object;
+        }
+        key = Current()->raw_value_;
+        Advance();
+
+        // 字符串键后必须跟冒号
+        if (!Consume(TokenType::COLON, ERR_COLON_EXPECTED))
+        {
+            return ret_object;
+        }
+        Advance();
+
+        JsonValue value; // 键对应的值
+        if (!ParseValue(value))
+        {
+            return ret_object;
+        }
+        ret_object[key] = std::move(value);
+        Advance();
+
+        // 遇到"}"，对象结束，跳出循环
+        if (Current()->type_ == TokenType::RBRACE)
+        {
+            break;
+        }
+
+        if (!Consume(TokenType::COMMA, ERR_COMMA_EXPECTED))
+        {
+            return ret_object;
+        }
+        Advance();
+
+        // 判断上面的逗号是否是尾随逗号
+        if (const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1];
+            !ALLOW_TRALING_COMMA && Current()->type_ == TokenType::RBRACE)
+        {
+            const POS_T line_begin = json_data_.lines_index_[prev_token->row_].first;
+            const POS_T line_end = json_data_.lines_index_[prev_token->row_].second;
+            ErrInfo err_info{ERR_TRALING_COMMA, json_data_.source_.substr(line_begin, line_end - line_begin),
+                             prev_token->row_, prev_token->col_, prev_token->len_};
+            err_reporter_.AddError(std::move(err_info));
+            break;
+        }
+    }
+
+    if (Current()->type_ == TokenType::EOF_)
+    {
+        // 如果当前为EOF_，则认为数组没有关闭
+        const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
+        const POS_T line_begin = json_data_.lines_index_[prev_token->row_].first;
+        const POS_T line_end = json_data_.lines_index_[prev_token->row_].second;
+        ErrInfo err_info{ERR_ARRAY_NOT_CLOSED, json_data_.source_.substr(line_begin, line_end - line_begin),
+                         prev_token->row_, prev_token->col_, prev_token->len_};
+        err_reporter_.AddError(std::move(err_info));
+    }
+
+    return {ret_object};
 }
 
 JsonValue Parser::ParseArray() noexcept
 {
+    std::vector<JsonValue> ret_array;
+    if (!Consume(TokenType::LBRACKET, ERR_TYPE_NOT_ARRAY))
+    {
+        return {ret_array};
+    }
+    Advance();
+
+    // 处理空数组
+    if (Current()->type_ == TokenType::RBRACKET)
+    {
+        Advance();
+        return {ret_array};
+    }
+
+    while (Current()->type_ != TokenType::EOF_)
+    {
+        JsonValue return_value;
+        if (!ParseValue(return_value))
+        {
+            return {ret_array};
+        }
+        ret_array.push_back(std::move(return_value));
+        Advance();
+
+        // 遇到"]"，数组结束，结束循环
+        if (Current()->type_ == TokenType::RBRACKET)
+        {
+            break;
+        }
+
+        if (!Consume(TokenType::COMMA, ERR_COMMA_EXPECTED))
+        {
+            return {ret_array};
+        }
+        Advance();
+
+        // 判断上面的逗号是否是尾随逗号
+        if (const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1];
+            !ALLOW_TRALING_COMMA && Current()->type_ == TokenType::RBRACKET)
+        {
+            const POS_T line_begin = json_data_.lines_index_[prev_token->row_].first;
+            const POS_T line_end = json_data_.lines_index_[prev_token->row_].second;
+            ErrInfo err_info{ERR_TRALING_COMMA, json_data_.source_.substr(line_begin, line_end - line_begin),
+                             prev_token->row_, prev_token->col_, prev_token->len_};
+            err_reporter_.AddError(std::move(err_info));
+            break;
+        }
+    }
+
+    if (Current()->type_ == TokenType::EOF_)
+    {
+        // 如果当前为EOF_，则认为数组没有关闭
+        const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
+        const POS_T line_begin = json_data_.lines_index_[prev_token->row_].first;
+        const POS_T line_end = json_data_.lines_index_[prev_token->row_].second;
+        ErrInfo err_info{ERR_ARRAY_NOT_CLOSED, json_data_.source_.substr(line_begin, line_end - line_begin),
+                         prev_token->row_, prev_token->col_, prev_token->len_};
+        err_reporter_.AddError(std::move(err_info));
+    }
+
+    return {ret_array};
+}
+
+JsonValue Parser::ParseNumber() noexcept
+{
+    const Token *cur_token = Current();
+    if (cur_token->raw_value_.find('e') != std::string::npos || cur_token->raw_value_.find('.') != std::string::npos)
+    {
+        return {std::stold(cur_token->raw_value_)};
+    }
+
+    return {std::stoll(cur_token->raw_value_)};
 }
 
 const Token *Parser::Current() const noexcept
@@ -860,7 +1038,7 @@ const Token *Parser::Current() const noexcept
     return nullptr;
 }
 
-const Token *Parser::Advance() noexcept
+Token *Parser::Advance() noexcept
 {
     if (cur_token_index_ + 1 < json_data_.tokens_.size())
     {

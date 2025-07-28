@@ -182,7 +182,7 @@ class Lexer
 class Parser
 {
   public:
-    template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay<T>, JsonData>>>
+    template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, JsonData>>>
     explicit Parser(T &&json_data) : json_data_(std::forward<T>(json_data))
     {
         Parse();
@@ -208,12 +208,13 @@ class Parser
     size_t cur_token_index_{0};
 
     void Parse() noexcept; // 词法分析器入口
-    [[nodiscard]] JsonValue ParseValue() noexcept;
+    [[nodiscard]] bool ParseValue(JsonValue &return_value) noexcept;
     [[nodiscard]] JsonValue ParseObject() noexcept;
     [[nodiscard]] JsonValue ParseArray() noexcept;
+    [[nodiscard]] JsonValue ParseNumber() noexcept; // json数字有很多种情况，要区分整形和浮点
 
     [[nodiscard]] const Token *Current() const noexcept;
-    [[nodiscard]] const Token *Advance() noexcept;
+    Token *Advance() noexcept;
     [[nodiscard]] bool Consume(TokenType token_type,
                                std::string err_desc) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
 };

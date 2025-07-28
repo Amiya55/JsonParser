@@ -209,6 +209,20 @@ void TokenStreamTest()
     }
 }
 
+// 语法分析器测试
+void ParserTest()
+{
+    try
+    {
+        simple_json::Lexer lexer(ReadTest());
+        simple_json::Parser parser(std::move(lexer.GetToken()));
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
+}
+
 } // namespace
 
 int main()
@@ -222,8 +236,9 @@ int main()
     // TestJsonTypes3();
     // ConvertUnicodeTest();
     // LexerTest();
-    ErrMsgsTest();
+    // ErrMsgsTest();
     // LineSplitTest();
     // TokenStreamTest();
+    ParserTest();
     return 0;
 }
