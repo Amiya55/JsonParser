@@ -893,11 +893,19 @@ JsonValue Parser::ParseObject() noexcept
             MakeErrInfo(ERR_OBJECT_KEY_MUST_BE_STRING, Current());
 
             Synchronize();
-            if (Current()->type_ == TokenType::RBRACE)
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            {
+                Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+                continue;
+            }
+            else if (cur_token->type_ == TokenType::LBRACE)
             {
                 break;
             }
-            continue;
         }
         key = Current()->raw_value_;
         Advance();
@@ -908,11 +916,19 @@ JsonValue Parser::ParseObject() noexcept
             MakeErrInfo(ERR_COLON_EXPECTED, Current());
 
             Synchronize();
-            if (Current()->type_ == TokenType::RBRACE)
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            {
+                Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+                continue;
+            }
+            else if (cur_token->type_ == TokenType::LBRACE)
             {
                 break;
             }
-            continue;
         }
         Advance();
 
@@ -932,23 +948,32 @@ JsonValue Parser::ParseObject() noexcept
 
         if (!Consume(TokenType::COMMA))
         {
+            // 如果当前不是逗号，那么就语法有错误，进入恐慌模式
             MakeErrInfo(ERR_COMMA_EXPECTED, Current());
 
             Synchronize();
-            if (Current()->type_ == TokenType::RBRACE)
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            {
+                Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+                continue;
+            }
+            else if (cur_token->type_ == TokenType::LBRACE)
             {
                 break;
             }
-            continue;
         }
-        Advance();
-
-        // 判断上面的逗号是否是尾随逗号
-        if (const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1];
-            !ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+        else
         {
-            MakeErrInfo(ERR_TRAILING_COMMA, prev_token);
-            break;
+            // 如果当前是逗号，那么检查是否为尾随逗号
+            Advance();
+            if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+            {
+                MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+            }
         }
     }
 
@@ -988,11 +1013,7 @@ JsonValue Parser::ParseArray() noexcept
             break;
         }
 
-        if (Consume(TokenType::COMMA))
-        {
-            Advance();
-        }
-        else
+        if (!Consume(TokenType::COMMA))
         {
             MakeErrInfo(ERR_COMMA_EXPECTED, Current());
 
@@ -1000,19 +1021,24 @@ JsonValue Parser::ParseArray() noexcept
             if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
             {
                 Advance();
+                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
+                {
+                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                }
+                continue;
             }
             else if (cur_token->type_ == TokenType::RBRACKET)
             {
                 break;
             }
         }
-
-        // 判断上面的逗号是否是尾随逗号
-        if (const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1];
-            !ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
+        else
         {
-            MakeErrInfo(ERR_TRAILING_COMMA, prev_token);
-            break;
+            Advance();
+            if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
+            {
+                MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+            }
         }
     }
 
@@ -1035,6 +1061,15 @@ JsonValue Parser::ParseNumber() noexcept
     }
 
     return {std::stoll(cur_token->raw_value_)};
+}
+
+const Token *Parser::Prev() const noexcept
+{
+    if (cur_token_index_ - 1 >= 0)
+    {
+        return &json_data_.tokens_[cur_token_index_ - 1];
+    }
+    return nullptr;
 }
 
 const Token *Parser::Current() const noexcept

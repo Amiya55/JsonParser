@@ -213,6 +213,7 @@ class Parser
     [[nodiscard]] JsonValue ParseArray() noexcept;
     [[nodiscard]] JsonValue ParseNumber() noexcept; // json数字有很多种情况，要区分整形和浮点
 
+    [[nodiscard]] const Token *Prev() const noexcept;
     [[nodiscard]] const Token *Current() const noexcept;
     Token *Advance() noexcept;
     [[nodiscard]] bool Consume(TokenType token_type) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
