@@ -75,14 +75,32 @@ class ErrReporter
     ErrReporter &operator=(const ErrReporter &) = delete;
     ErrReporter &operator=(ErrReporter &&) = delete;
 
+    /**
+     * @brief Adds an error description based on information in the ErrInfo struct for highlighted printing.
+     *
+     * @param errInfo Error information retrieved from various methods, including the error description, line and column
+     * number of the error, and the highlight print length.
+     */
     template <typename T, typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, ErrInfo>>>
     void AddError(T &&errInfo)
     {
         errors_.push_back(std::forward<T>(errInfo));
     }
 
+    /**
+     * @brief Determines if any errors occurred during the entire program module's execution.
+     *
+     * @return Returns true if an error is found, and false if not.
+     */
     [[nodiscard]] bool HasError() const noexcept;
-    void ThrowError(bool throwAll = false) const;
+
+    /**
+     * @brief Throws all recorded error messages.
+     *
+     * @param throw_all Choose whether to print all errors. Set the parameter to true to print all errors, or false to
+     * print a single error.
+     */
+    void ThrowError(bool throw_all = false) const;
 };
 
 class Lexer
@@ -106,6 +124,12 @@ class Lexer
     Lexer &operator=(const Lexer &) = delete;
     Lexer &operator=(Lexer &&) = delete;
 
+    /**
+     * @brief Retrieves the token stream analyzed by the lexical analyzer as well as the original JSON string.
+     *
+     * @return Returns the original JSON string and the token stream (i.e., the offset address of each line) obtained
+     * during the lexical analysis.
+     */
     [[nodiscard]] JsonData &GetToken() noexcept;
 
   private:
@@ -162,21 +186,92 @@ class Lexer
     POS_T cur_row_{0};   // 当前字符行
     POS_T cur_col_{0};   // 当前字符列
 
+    /**
+     * @brief Marks the start and end positions of each line in the original JSON string.
+     *
+     */
     void SplitLines() noexcept; // 标记原始json字符串中每行的起始位置和结束位置
-    void Scan();
 
+    /**
+     * @brief The entry point for the lexical analyzer. It tokenizes the original JSON string by breaking it down into a
+     * stream of tokens.
+     *
+     */
+    void Scan(); // 词法分析器入口，对原始json字符串进行切分，拆分为token流
+
+    /**
+     * @brief Checks if a token is terminated. A token terminates if the current character is a ,, ], }, \0, or :.
+     *
+     * @return Returns true if the token is terminated; otherwise, returns false.
+     */
     [[nodiscard]] bool TokenIsOver() const noexcept; // 判断一个token是否结束
+
+    /**
+     * @brief Check for the end of the JSON string (encounters EOF).
+     *
+     * @return Returns true if the JSON string ends (encounters EOF), otherwise returns false.
+     */
     [[nodiscard]] bool IsAtEnd() const noexcept;
+
+    /**
+     * @brief Check a line is ended or not. (encounters \n)
+     *
+     * @return Returns true if a line has ended (encounters \n); otherwise, returns false.
+     */
     [[nodiscard]] bool IsEndOfLine() const noexcept; // 判断一行是否结束
 
+    /**
+     * @brief Get the character being parsed.
+     *
+     * @return return the current character.
+     */
     [[nodiscard]] char Current() const noexcept;
+
+    /**
+     * @brief Advance the lexer by one character.
+     *
+     * @return Returns the advanced character.
+     */
     char Advance() noexcept;
 
+    /**
+     * @brief Creates a new token from the information parsed by the lexical analyzer.
+     *
+     * @param str Raw string of the new token
+     * @param type The C++ type corresponding to the new token
+     * @return A new token object created from the basic information you passed.
+     */
     [[nodiscard]] Token MakeToken(std::string &&str, TokenType type) const noexcept;
 
     // 以下函数都是_scan函数的子模块
+    /**
+     * @brief The lexical analyzer parses a JSON string.
+     *
+     * @param return_token A return-by-reference parameter used to return the successfully parsed string.
+     * @param err_info A return-type parameter used to return the error information encountered during parsing (which
+     * signifies a parsing failure).
+     * @return Returns true on successfully parsing a token, false otherwise.
+     */
     bool ParseString(Token &return_token, ErrInfo &err_info);  // 解析json字符串
+
+    /**
+     * @brief The lexical analyzer parses a JSON number.
+     *
+     * @param return_token A return-by-reference parameter used to return the successfully parsed number.
+     * @param err_info A return-type parameter used to return the error information encountered during parsing (which
+     * signifies a parsing failure).
+     * @return Returns true on successfully parsing a token, false otherwise.
+     */
     bool ParseNumber(Token &return_token, ErrInfo &err_info);  // 解析json数字
+
+    /**
+     * @brief The lexical analyzer parses a JSON literal (true, false, null).
+     *
+     * @param return_token A return-by-reference parameter used to return the successfully parsed literal.
+     * @param err_info A return-type parameter used to return the error information encountered during parsing (which
+     * signifies a parsing failure).
+     * @return Returns true on successfully parsing a token, false otherwise.
+     */
     bool ParseLiteral(Token &return_token, ErrInfo &err_info); // 解析json字面量(true, false, null)
 };
 
