@@ -6,10 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 namespace
 {
 
@@ -227,9 +223,6 @@ void ParserTest()
 
 int main()
 {
-#ifdef _WIN32
-    SetConsoleOutputCP(65001);
-#endif
     // std::cout << "hello JsonParser!" << '\n';
     // TestJsonTypes1();
     // TestJsonTypes2();

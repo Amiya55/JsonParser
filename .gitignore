@@ -34,7 +34,7 @@
 build/
 cmake-build-debug/
 
-.vscode/
+# .vscode/
 .idea/
 .cache/
 test/
