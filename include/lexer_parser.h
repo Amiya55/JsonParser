@@ -208,16 +208,65 @@ class Parser
 
     size_t cur_token_index_{0};
 
+    /**
+     * @brief Lexer entry point
+     *
+     */
     void Parse() noexcept; // 词法分析器入口
+
+    /**
+     * @brief The main control function of the JSON lexical analyzer, used for parsing various JSON types.
+     *
+     * @param return_value A return-type parameter used to return the C++ type parsed by this function.
+     * @return Returns true on successful parse, false otherwise.
+     */
     [[nodiscard]] bool ParseValue(JsonValue &return_value) noexcept;
+
+    /**
+     * @brief Parse an json object from a token stream
+     *
+     * @return C++ hashmap structure returned by the parser.
+     */
     [[nodiscard]] JsonValue ParseObject() noexcept;
+
+    /**
+     * @brief Parse an json array from a token stream
+     *
+     * @return C++ array structure returned by the parser.
+     */
     [[nodiscard]] JsonValue ParseArray() noexcept;
+
+    /**
+     * @brief Parse a JSON number and dispatch it to a C++ integer or floating-point type.
+     *
+     * @return Returns a C++ integer or floating-point type encapsulated in a JsonValue class after parsing.
+     */
     [[nodiscard]] JsonValue ParseNumber() noexcept; // json数字有很多种情况，要区分整形和浮点
 
     [[nodiscard]] const Token *Prev() const noexcept;
+
+    /**
+     * @brief View the current token
+     *
+     * @return Pointer to the current token
+     */
     [[nodiscard]] const Token *Current() const noexcept;
+
+    /**
+     * @brief Look ahead one token
+     *
+     * @return Pointer to the token ahead
+     */
     [[nodiscard]] const Token *Peek() const noexcept;
+
     Token *Advance() noexcept;
+    /**
+     * @brief Assert the specified token type
+     *
+     * @param token The token pointer you specified
+     * @param token_type The type you asserted
+     * @return Returns true on successful assertion, false otherwise.
+     */
     [[nodiscard]] bool Consume(const Token *token,
                                TokenType token_type) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
 
@@ -232,7 +281,8 @@ class Parser
      * If the highlight_pos and highlight_len parameters are not specified, the starting column and length of cur_token
      * will be used by default.
      */
-    void MakeErrInfo(std::string err_desc, const Token *cur_token, size_t highlight_pos = 0, size_t highlight_len = 0) noexcept;
+    void MakeErrInfo(std::string err_desc, const Token *cur_token, size_t highlight_pos = 0,
+                     size_t highlight_len = 0) noexcept;
 
     /**
      * @brief The parser enters panic mode and consumes tokens

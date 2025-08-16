@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace simple_json
+namespace simple_json 
 {
 bool ErrReporter::HasError() const noexcept
 {
@@ -831,12 +831,8 @@ void Parser::Parse() noexcept
     }
     else
     {
-        // 顶层不是对象或者数组，构建错误信息，准备抛异常
-        const POS_T line_begin = json_data_.lines_index_[cur_token->row_].first;
-        const POS_T line_end = json_data_.lines_index_[cur_token->row_].second;
-        ErrInfo err_info{ERR_MISMATCH_TOP_LEVEL, json_data_.source_.substr(line_begin, line_end - line_begin),
-                         cur_token->row_, cur_token->col_, cur_token->len_};
-        err_reporter_.AddError(std::move(err_info));
+        // 顶层不是对象或者数组，构建错误信息，抛异常
+        MakeErrInfo(ERR_MISMATCH_TOP_LEVEL, cur_token);
     }
 
 } // namespace simple_json
