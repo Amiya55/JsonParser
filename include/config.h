@@ -12,7 +12,7 @@ namespace simple_json
 #define ERR_TYPES
 #define ERR_TYPE_MISMATCH "The type mismatch occurred " // 错误提示：类型不匹配
 
-#define ERR_MISSING_QUOTATION_MARK "Here missing quotation mark"           // 错误提示，缺少引号
+#define ERR_MISSING_QUOTATION_MARK "Here missing quotation mark, string was not closed"           // 错误提示，缺少引号
 #define ERR_INVALID_ESCAPE "Invalid escape sequence"                       // 错误提示，非法转义序列
 #define ERR_INCOMPLETE_UNICODE_ESCAPE "Incomplete unicode escape sequence" // 错误提示，不完整的unicode转义序列
 #define ERR_INVALID_UNICODE_ESCAPE "Invalid unicode escape sequence"       // 错误提示，非法的unicode转义序列
@@ -34,7 +34,9 @@ namespace simple_json
 
 #define ERR_EXPECTED_JSON_VALUE_TYPE "Expected a valid json value type here" // 错误提示，此处需要一个合法的json值类型
 #define ERR_COLON_EXPECTED "Expected a colon after key"                      // 错误提示，此处需要一个冒号:
-#define ERR_COMMA_EXPECTED "Expected a comma here"                           // 错误提示，此处需要一个逗号
+#define ERR_COMMA_OR_BRACKET_EXPECTED                                                                                  \
+    "Expected a comma or closing bracket here"                               // 错误提示，此处需要一个逗号或者右中括号]
+#define ERR_COMMA_OR_BRACE_EXPECTED "Expected a comma or closing brace here" // 错误提示，此处需要一个逗号或者右大括号}
 #define ERR_TRAILING_COMMA "Trailing comma is not allowed in json"           // 错误提示，尾随逗号错误
 #define ERR_OBJECT_NOT_CLOSED "json object not closed"                       // 错误提示，json对象未闭合
 #define ERR_ARRAY_NOT_CLOSED "json array not closed"                         // 错误提示，json数组未闭合

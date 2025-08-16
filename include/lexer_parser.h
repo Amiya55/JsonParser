@@ -4,6 +4,7 @@
 #include "config.h"
 #include "json_type.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -215,12 +216,29 @@ class Parser
 
     [[nodiscard]] const Token *Prev() const noexcept;
     [[nodiscard]] const Token *Current() const noexcept;
+    [[nodiscard]] const Token *Peek() const noexcept;
     Token *Advance() noexcept;
-    [[nodiscard]] bool Consume(TokenType token_type) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
+    [[nodiscard]] bool Consume(const Token *token,
+                               TokenType token_type) noexcept; // 断言当前的token是什么类型，断言失败添加错误信息
 
-    // 构建错误信息
-    void MakeErrInfo(std::string err_desc, const Token *cur_token) noexcept;
-    // 解析器进入恐慌模式，消耗token直到找到了",", "]"或者"}"
+    /**
+     * @brief Constructing error messages
+     *
+     * @param err_desc Error Message
+     * @param cur_token Token corresponding to the error location
+     * @param highlight_pos Error highlight starting position. Only the starting column is needed, not the row, as the
+     * cur_token parameter already specifies the error line number.
+     * @param highlight_len Error highlight length.
+     * If the highlight_pos and highlight_len parameters are not specified, the starting column and length of cur_token
+     * will be used by default.
+     */
+    void MakeErrInfo(std::string err_desc, const Token *cur_token, size_t highlight_pos = 0, size_t highlight_len = 0) noexcept;
+
+    /**
+     * @brief The parser enters panic mode and consumes tokens
+     * until it finds a comma ,, or a bracket [, ], or a brace {, }.
+     *
+     */
     void Synchronize() noexcept;
 };
 } // namespace simple_json
