@@ -43,4 +43,4 @@ old/
 out/
 
 *.dSYM
-*.json
+compile_commands.json
