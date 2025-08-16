@@ -354,7 +354,13 @@ class Parser
      */
     [[nodiscard]] const Token *Peek() const noexcept;
 
+    /**
+     * @brief Advance one token.
+     *
+     * @return Return the advanced token pointer.
+     */
     Token *Advance() noexcept;
+
     /**
      * @brief Assert the specified token type
      *

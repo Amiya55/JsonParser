@@ -129,21 +129,44 @@ class JsonValue
     JsonValue &operator=(const JsonValue &other) noexcept = default;
     JsonValue &operator=(JsonValue &&other) noexcept = default;
 
+    /**
+     * @brief Creates a JSON object from a C++ array.
+     *
+     * @param arr C++ array with an initializer list.
+     * @return JsonValue contains a C++ array
+     */
     [[nodiscard]] static JsonValue MakeArr(const std::initializer_list<JsonValue> arr) noexcept
     {
         return {std::vector<JsonValue>{arr}};
     }
 
+    /**
+     * @brief Creates a JSON object from a C++ hash map.
+     *
+     * @param obj C++ hash map with an initializer list.
+     * @return JsonValue contains a C++ hash map
+     */
     [[nodiscard]] static JsonValue MakeObj(const std::initializer_list<std::pair<std::string, JsonValue>> obj) noexcept
     {
         return {std::unordered_map<std::string, JsonValue>{obj.begin(), obj.end()}};
     }
 
+    /**
+     * @brief Gets the type stored in the current JsonValue object.
+     *
+     * @return  Specific JsonType
+     */
     [[nodiscard]] JsonType GetType() const noexcept
     {
         return cur_type_;
     }
 
+    /**
+     * @brief Get current C++ value in JsonValue object
+     *
+     * @tparam Type The specified C++ type to be retrieved.
+     * @return auto The specified C++ value from the JsonValue object.
+     */
     template <JsonType Type> auto GetVal() const
     {
         if (Type != cur_type_)
@@ -182,6 +205,13 @@ class JsonValue
         }
     }
 
+    /**
+     * @brief A friend function used to print the corresponding JsonValue type with std::cout.
+     *
+     * @param os ostream
+     * @param val The specific JsonValue object
+     * @return std::ostream&
+     */
     friend std::ostream &operator<<(std::ostream &os, const JsonValue &val);
 };
 } // namespace simple_json
