@@ -5,7 +5,6 @@
 
 #include <cctype>
 #include <cstddef>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -16,7 +15,7 @@ bool ErrReporter::HasError() const noexcept
     return !errors_.empty();
 }
 
-void ErrReporter::ThrowError(const bool throwAll) const
+void ErrReporter::ThrowError(const bool throw_all) const
 {
     if (!HasError())
     {
@@ -24,7 +23,7 @@ void ErrReporter::ThrowError(const bool throwAll) const
     }
 
     std::string error_print_info;
-    const size_t error_count = throwAll ? errors_.size() : 1;
+    const size_t error_count = throw_all ? errors_.size() : 1;
     for (size_t i = 0; i < error_count; i++)
     {
         const POS_T err_row = errors_[i].row_ + 1; // 错误所在行的行号，面对用户，索引从1开始，所以加1
