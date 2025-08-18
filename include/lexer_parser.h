@@ -338,8 +338,6 @@ class Parser
      */
     [[nodiscard]] JsonValue ParseNumber() noexcept; // json数字有很多种情况，要区分整形和浮点
 
-    [[nodiscard]] const Token *Prev() const noexcept;
-
     /**
      * @brief View the current token
      *

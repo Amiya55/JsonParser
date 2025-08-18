@@ -881,112 +881,115 @@ JsonValue Parser::ParseObject() noexcept
     {
         std::string key;
         // json对象的键必须为字符串
-        if (!Consume(Current(), TokenType::STR)) // need fix
+        if (!Consume(Current(), TokenType::STR))
         {
             MakeErrInfo(ERR_OBJECT_KEY_MUST_BE_STRING, Current());
-            Synchronize();
+            SynchronizeObj();
 
             // 检查尾随逗号
-            const Token *cur_token = Current();
-            if (cur_token->type_ == TokenType::COMMA)
+            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
             {
-                Advance();
-                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACE)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                    MakeErrInfo(ERR_TRAILING_COMMA, cur_token);
                 }
+                Advance();
             }
-
-            // 检查遇到[或者{的情况，这种情况需要就地解析
-            if (cur_token->type_ == TokenType::LBRACE)
-            {
-                ParseObject();
-            }
-            else if (cur_token->type_ == TokenType::LBRACKET)
-            {
-                ParseArray();
-            }
-
             continue;
         }
         key = Current()->raw_value_;
 
         // 字符串键后必须跟冒号
-        if (!Consume(Peek(), TokenType::COLON)) // need fix
+        if (!Consume(Peek(), TokenType::COLON))
         {
-            MakeErrInfo(ERR_COLON_EXPECTED, Current());
+            const Token *before_panic = Current();
+            MakeErrInfo(ERR_COLON_EXPECTED, before_panic, before_panic->col_ + before_panic->len_, 1);
+            SynchronizeObj();
 
-            Synchronize();
-            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            if (const Token *after_panic = Current(); after_panic->type_ == TokenType::COMMA)
             {
-                Advance();
-                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACE)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                    MakeErrInfo(ERR_TRAILING_COMMA, after_panic);
                 }
+                Advance();
             }
             continue;
         }
+
+        // 第一次Advance跳过key键
+        Advance();
+        // 第二次Advance跳过:冒号
         Advance();
 
-        Advance();
-
-        JsonValue value; // 键对应的值
+        // 开始解析value值
+        JsonValue value; // 返回型参数，键对应的值
         if (!ParseValue(value))
         {
             MakeErrInfo(ERR_EXPECTED_JSON_VALUE_TYPE, Current());
+            SynchronizeObj();
 
-            Synchronize();
             if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
             {
-                Advance();
-                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACE)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                    MakeErrInfo(ERR_TRAILING_COMMA, cur_token);
                 }
+                Advance();
             }
             continue;
         }
         ret_object[key] = std::move(value);
-        Advance();
-
-        // 遇到"}"，对象结束，跳出循环
-        if (Current()->type_ == TokenType::RBRACE)
+        // 解析value的时候可能会遇到嵌套的数据结构走到EOF_的情况，我们必须处理这种情况
+        if (Current()->type_ == TokenType::EOF_)
         {
             break;
         }
 
-        if (!Consume(Current(), TokenType::COMMA))
+        // 遇到"}"，对象结束，跳出循环
+        if (Peek()->type_ == TokenType::RBRACE)
+        {
+            Advance();
+            break;
+        }
+
+        // 值解析完，并且下一个token不是}，那么断言下一个token是,逗号
+        if (!Consume(Peek(), TokenType::COMMA))
         {
             // 如果当前不是逗号，那么就语法有错误，进入恐慌模式
-            MakeErrInfo(ERR_COMMA_OR_BRACE_EXPECTED, Current());
+            const Token *before_panic = Current();
+            MakeErrInfo(ERR_COMMA_OR_BRACE_EXPECTED, before_panic, before_panic->col_ + before_panic->len_, 1);
+            SynchronizeObj();
 
-            Synchronize();
-            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+            if (const Token *after_panic = Current(); after_panic->type_ == TokenType::COMMA)
             {
-                Advance();
-                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+                if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACE)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                    MakeErrInfo(ERR_TRAILING_COMMA, after_panic);
                 }
+                Advance();
             }
             continue;
         }
-
-        // 如果当前是逗号，那么检查是否为尾随逗号
+        // 跳过value值
         Advance();
-        if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
+
+        // 这时Current()->type_是TokenType::COMMA逗号
+        // 我们需要判断是不是尾随逗号
+        if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACE)
         {
-            MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+            MakeErrInfo(ERR_TRAILING_COMMA, Current());
         }
+        // 跳过,逗号
+        Advance();
     }
 
-    if (Current()->type_ == TokenType::EOF_)
-    {
-        // 如果当前为EOF_，则认为数组没有关闭
-        const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
-        MakeErrInfo(ERR_OBJECT_NOT_CLOSED, prev_token);
-    }
+    // if (Current()->type_ == TokenType::EOF_)
+    // {
+    //     // 如果当前为EOF_，则认为数组没有关闭
+    //     const Token *prev_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
+    //     MakeErrInfo(ERR_OBJECT_NOT_CLOSED, prev_token);
+    // }
 
     return {ret_object};
 }
@@ -1021,6 +1024,10 @@ JsonValue Parser::ParseArray() noexcept
             continue;
         }
         ret_array.push_back(std::move(return_value));
+        if (Current()->type_ == TokenType::EOF_)
+        {
+            break;
+        }
 
         // 判断下一个token是是否是"]"，如果是，则认为数组结束
         if (Peek()->type_ == TokenType::RBRACKET)
@@ -1047,7 +1054,7 @@ JsonValue Parser::ParseArray() noexcept
                 // 是尾随逗号，报错
                 if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACKET)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Current());
+                    MakeErrInfo(ERR_TRAILING_COMMA, after_panic);
                 }
                 // 不是尾随逗号，跳过逗号，从头开始解析
                 Advance();
@@ -1066,12 +1073,12 @@ JsonValue Parser::ParseArray() noexcept
         Advance();
     }
 
-    if (Current()->type_ == TokenType::EOF_)
-    {
-        // 如果当前为EOF_，则认为数组没有关闭
-        const Token *last_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
-        MakeErrInfo(ERR_ARRAY_NOT_CLOSED, last_token, last_token->col_ + last_token->len_, 1);
-    }
+    // if (Current()->type_ == TokenType::EOF_)
+    // {
+    //     // 如果当前为EOF_，则认为数组没有关闭
+    //     const Token *last_token = &json_data_.tokens_[cur_token_index_ - 1]; // EOF_的前一个token
+    //     MakeErrInfo(ERR_ARRAY_NOT_CLOSED, last_token, last_token->col_ + last_token->len_, 1);
+    // }
 
     return {ret_array};
 }
@@ -1085,15 +1092,6 @@ JsonValue Parser::ParseNumber() noexcept
     }
 
     return {std::stoll(cur_token->raw_value_)};
-}
-
-const Token *Parser::Prev() const noexcept
-{
-    if (cur_token_index_ - 1 >= 0)
-    {
-        return &json_data_.tokens_[cur_token_index_ - 1];
-    }
-    return nullptr;
 }
 
 const Token *Parser::Current() const noexcept
