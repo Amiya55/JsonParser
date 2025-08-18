@@ -387,10 +387,17 @@ class Parser
 
     /**
      * @brief The parser enters panic mode and consumes tokens
-     * until it finds a comma ,, or a bracket [, ], or a brace {, }.
-     *
+     * until it finds a comma ,, or a bracket[, ], or a brace {, or a new value.
+     * notice: this method only suitable for json array.
      */
-    void Synchronize() noexcept;
+    void SynchronizeArr() noexcept;
+
+    /**
+     * @brief The parser enters panic mode and consumes tokens
+     * until it finds a comma ,, or a brace }, or a new key-value pair.
+     * notice: this method only suitable for json object.
+     */
+    void SynchronizeObj() noexcept;
 };
 } // namespace simple_json
 

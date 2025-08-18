@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace simple_json 
+namespace simple_json
 {
 bool ErrReporter::HasError() const noexcept
 {
@@ -884,9 +884,11 @@ JsonValue Parser::ParseObject() noexcept
         if (!Consume(Current(), TokenType::STR)) // need fix
         {
             MakeErrInfo(ERR_OBJECT_KEY_MUST_BE_STRING, Current());
-
             Synchronize();
-            if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
+
+            // 检查尾随逗号
+            const Token *cur_token = Current();
+            if (cur_token->type_ == TokenType::COMMA)
             {
                 Advance();
                 if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACE)
@@ -894,13 +896,23 @@ JsonValue Parser::ParseObject() noexcept
                     MakeErrInfo(ERR_TRAILING_COMMA, Prev());
                 }
             }
+
+            // 检查遇到[或者{的情况，这种情况需要就地解析
+            if (cur_token->type_ == TokenType::LBRACE)
+            {
+                ParseObject();
+            }
+            else if (cur_token->type_ == TokenType::LBRACKET)
+            {
+                ParseArray();
+            }
+
             continue;
         }
         key = Current()->raw_value_;
-        Advance();
 
         // 字符串键后必须跟冒号
-        if (!Consume(Current(), TokenType::COLON)) // need fix
+        if (!Consume(Peek(), TokenType::COLON)) // need fix
         {
             MakeErrInfo(ERR_COLON_EXPECTED, Current());
 
@@ -915,6 +927,8 @@ JsonValue Parser::ParseObject() noexcept
             }
             continue;
         }
+        Advance();
+
         Advance();
 
         JsonValue value; // 键对应的值
@@ -994,14 +1008,15 @@ JsonValue Parser::ParseArray() noexcept
         {
             MakeErrInfo(ERR_EXPECTED_JSON_VALUE_TYPE, Current());
 
-            Synchronize();
+            SynchronizeArr();
             if (const Token *cur_token = Current(); cur_token->type_ == TokenType::COMMA)
             {
-                Advance();
-                if (!ALLOW_TRAILING_COMMA && Current()->type_ == TokenType::RBRACKET)
+                // 判断下一个token是否为]，可以判断当前的逗号token是否为尾随逗号
+                if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACKET)
                 {
-                    MakeErrInfo(ERR_TRAILING_COMMA, Prev());
+                    MakeErrInfo(ERR_TRAILING_COMMA, cur_token);
                 }
+                Advance();
             }
             continue;
         }
@@ -1024,7 +1039,7 @@ JsonValue Parser::ParseArray() noexcept
             // 所以不能直接在token的起始位置进行高亮，必须以该token长度为基准进行偏移
             MakeErrInfo(ERR_COMMA_OR_BRACKET_EXPECTED, before_panic, before_panic->col_ + before_panic->len_, 1);
             // 进入恐慌模式
-            Synchronize();
+            SynchronizeArr();
 
             // 判断下一个token是否为"]"，如果是，并且不允许尾随逗号，那么认为此处为语法错误
             if (const Token *after_panic = Current(); after_panic->type_ == TokenType::COMMA)
@@ -1033,10 +1048,7 @@ JsonValue Parser::ParseArray() noexcept
                 if (!ALLOW_TRAILING_COMMA && Peek()->type_ == TokenType::RBRACKET)
                 {
                     MakeErrInfo(ERR_TRAILING_COMMA, Current());
-                    Advance();
-                    break;
                 }
-
                 // 不是尾随逗号，跳过逗号，从头开始解析
                 Advance();
             }
@@ -1139,7 +1151,7 @@ void Parser::MakeErrInfo(std::string err_desc, const Token *cur_token, size_t hi
     err_reporter_.AddError(std::move(err_info));
 }
 
-void Parser::Synchronize() noexcept
+void Parser::SynchronizeArr() noexcept
 {
     Advance();
     while (Current()->type_ != TokenType::EOF_)
@@ -1149,11 +1161,38 @@ void Parser::Synchronize() noexcept
         case TokenType::COMMA:
         case TokenType::LBRACE:
         case TokenType::LBRACKET:
-        case TokenType::RBRACE:
         case TokenType::RBRACKET:
+        case TokenType::TRUE:
+        case TokenType::FALSE:
+        case TokenType::NULL_:
+        case TokenType::NUM:
+        case TokenType::STR:
         case TokenType::EOF_:
             return;
         default:
+            Advance(); // 未找到安全值则一致消耗token
+        }
+    }
+}
+
+void Parser::SynchronizeObj() noexcept
+{
+    Advance();
+    while (Current()->type_ != TokenType::EOF_)
+    {
+        switch (const Token *cur_token = Current(); cur_token->type_)
+        {
+        case TokenType::COMMA:
+        case TokenType::RBRACE:
+        case TokenType::EOF_:
+            return;
+        default:
+            // 判断是否为key-value键值对
+            if (cur_token->type_ == TokenType::STR && Peek()->type_ == TokenType::COLON)
+            {
+                return;
+            }
+
             Advance(); // 未找到安全值则一致消耗token
         }
     }
