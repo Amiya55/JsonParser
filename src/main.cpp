@@ -1,3 +1,4 @@
+#include "json.h"
 #include "json_type.h"
 #include "lexer_parser.h"
 #include "utilities.h"
@@ -219,6 +220,12 @@ void ParserTest()
     }
 }
 
+// json测试
+void JsonTest()
+{
+    simple_json::Json json = simple_json::Json::FromFile("./tmp.json");
+}
+
 } // namespace
 
 int main()
@@ -232,6 +239,7 @@ int main()
     // ErrMsgsTest();
     // LineSplitTest();
     // TokenStreamTest();
-    ParserTest();
+    // ParserTest();
+    JsonTest();
     return 0;
 }

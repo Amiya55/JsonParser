@@ -130,7 +130,7 @@ class Lexer
      * @return Returns the original JSON string and the token stream (i.e., the offset address of each line) obtained
      * during the lexical analysis.
      */
-    [[nodiscard]] JsonData &GetToken() noexcept;
+    [[nodiscard]] JsonData GetToken() const noexcept;
 
   private:
     JsonData data_;            // 当前json的所有信息，包括原始json字符串，json换行位置偏移，token流
@@ -252,7 +252,7 @@ class Lexer
      * signifies a parsing failure).
      * @return Returns true on successfully parsing a token, false otherwise.
      */
-    bool ParseString(Token &return_token, ErrInfo &err_info);  // 解析json字符串
+    bool ParseString(Token &return_token, ErrInfo &err_info); // 解析json字符串
 
     /**
      * @brief The lexical analyzer parses a JSON number.
@@ -262,7 +262,7 @@ class Lexer
      * signifies a parsing failure).
      * @return Returns true on successfully parsing a token, false otherwise.
      */
-    bool ParseNumber(Token &return_token, ErrInfo &err_info);  // 解析json数字
+    bool ParseNumber(Token &return_token, ErrInfo &err_info); // 解析json数字
 
     /**
      * @brief The lexical analyzer parses a JSON literal (true, false, null).
@@ -295,6 +295,13 @@ class Parser
     Parser(Parser &&) = delete;
     Parser &operator=(const Parser &) = delete;
     Parser &operator=(const Parser &&) = delete;
+
+    /**
+     * @brief get the Json Ast object
+     *
+     * @return JsonValue& - json ast which parsed by parser.
+     */
+    [[nodiscard]] JsonValue GetJsonAst() const noexcept;
 
   private:
     JsonValue json_;           // 经过语法分析器构建的json数据结构

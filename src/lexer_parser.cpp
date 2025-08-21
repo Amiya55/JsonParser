@@ -56,7 +56,7 @@ void ErrReporter::ThrowError(const bool throw_all) const
     throw std::runtime_error(error_print_info);
 }
 
-JsonData &Lexer::GetToken() noexcept
+JsonData Lexer::GetToken() const noexcept
 {
     return data_;
 }
@@ -815,6 +815,11 @@ bool Lexer::ParseLiteral(Token &return_token, ErrInfo &err_info)
     err_info.len_ = token_len;
 
     return cur_stat == LiteralDfaStat::LITERAL_END;
+}
+
+JsonValue Parser::GetJsonAst() const noexcept
+{
+    return json_;
 }
 
 void Parser::Parse() noexcept
