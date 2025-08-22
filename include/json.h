@@ -11,9 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
-#include <iostream>
 namespace simple_json
 {
 
@@ -98,17 +96,32 @@ class Json
         {
             if (data_.GetType() != JsonType::Array)
             {
-                throw std::runtime_error("json operator[] > cannot use integral to locate json object pair!");
+                throw std::invalid_argument(ERR_ARRAY_INTEGRAL);
             }
+
+            std::vector<JsonValue> array = data_.GetVal<JsonType::Array>();
+            if (index < 0 || index >= array.size())
+            {
+                throw std::out_of_range(ERR_OUT_OF_RANGE);
+            }
+
             return data_.GetVal<JsonType::Array>()[std::forward<T>(index)];
         }
         else
         {
             if (data_.GetType() != JsonType::Object)
             {
-                throw std::runtime_error("json operator[] > cannot use string to locate json array item!");
+                throw std::invalid_argument(ERR_OBJECT_STRING);
             }
-            return data_.GetVal<JsonType::Object>()[std::forward<T>(index)];
+
+            std::string key(std::forward<T>(index));
+            std::unordered_map<std::string, JsonValue> object = data_.GetVal<JsonType::Object>();
+            if (object.find(key) == object.end())
+            {
+                throw std::invalid_argument(ERR_INVALID_KEY);
+            }
+
+            return data_.GetVal<JsonType::Object>()[std::move(key)];
         }
     }
 

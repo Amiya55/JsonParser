@@ -6,6 +6,7 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 
 namespace
 {
@@ -223,13 +224,40 @@ void ParserTest()
 // json测试
 void JsonTest()
 {
-    simple_json::Json json = simple_json::Json::FromFile("./tmp.json");
-    std::cout << json << '\n';
+    try
+    {
+        simple_json::Json json = simple_json::Json::FromFile("./tmp.json");
+        std::cout << json << '\n';
 
-    std::string key("c++");
-    std::cout << json[key].GetVal<simple_json::JsonType::String>() << '\n';
-    // simple_json::JsonValue val = json[key];
-    // std::cout << val.GetVal<simple_json::JsonType::String>() << '\n';
+        // std::string key("c++");
+        // std::cout << json[key].GetVal<simple_json::JsonType::String>() << '\n';
+        // // simple_json::JsonValue val = json[key];
+        // // std::cout << val.GetVal<simple_json::JsonType::String>() << '\n';
+
+        // json[key] = simple_json::JsonValue::MakeArr({"hello", "world", "c++"});
+        // for (const auto &item : json[key].GetVal<simple_json::JsonType::Array>())
+        // {
+        //     std::cout << item << ' ';
+        // }
+        // std::cout << '\n';
+
+        std::unordered_map<std::string, simple_json::JsonValue> hash =
+            json["word"]["c"]["q"][2].GetVal<simple_json::JsonType::Object>();
+        for (const auto &pair : hash)
+        {
+            std::cout << pair.first << ": " << pair.second << '\n';
+        }
+        std::cout << '\n';
+
+        json["word"]["c"]["q"][2].GetVal<simple_json::JsonType::Object>().insert(
+            std::make_pair("1000", "I like doro!!"));
+
+        std::cout << json << '\n';
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << e.what() << '\n';
+    }
 }
 
 } // namespace

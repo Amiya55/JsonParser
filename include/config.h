@@ -45,6 +45,14 @@ namespace simple_json
 #define INVALID_PATH "invalid file path"       // 错误提示, 非法的文件路径，表示路径不存在
 #define INVALID_FILE "invalid json file"       // 错误提示，非法的文件，目标文件不是json文件
 #define FAILED_OPEN_FILE "failed to open file" // 错误提示，打开文件失败
+
+#define ERR_ARRAY_INTEGRAL                                                                                             \
+    "operator[] > integral index only can be use in json array" // 错误提示, 只能对json数组使用[int]
+#define ERR_OBJECT_STRING                                                                                              \
+    "operator[] > string key only can be use in json object" // 错误提示, 只能对json对象使用[string]
+
+#define ERR_OUT_OF_RANGE "json array out of range!"    // 错误提示, 出现json数组越界
+#define ERR_INVALID_KEY "json object has no such key!" // 错误提示, json对象中没有对应的键
 #endif
 
 // json扩展规则

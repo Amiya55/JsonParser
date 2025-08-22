@@ -167,7 +167,7 @@ class JsonValue
      * @tparam Type - The specified C++ type to be retrieved.
      * @return auto - The specified C++ const reference value from the JsonValue object.
      */
-    template <JsonType Type> const auto& GetVal() const
+    template <JsonType Type> const auto &GetVal() const
     {
         if (Type != cur_type_)
         {
@@ -246,6 +246,49 @@ class JsonValue
         else if constexpr (Type == JsonType::Null)
         {
             return std::get<std::nullptr_t>(cur_val_);
+        }
+    }
+
+    /**
+     * @brief Get specific json value.
+     *
+     * @param index - If you want to get value from json array, param index must be integral; If you want to get value
+     * from json object, index must be string.
+     * @return JsonValue& - The reference to the specific json value.
+     */
+    template <typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_constructible_v<std::string, T>>>
+    JsonValue &operator[](T &&index)
+    {
+        if constexpr (std::is_integral_v<T>)
+        {
+            if (cur_type_ != JsonType::Array)
+            {
+                throw std::invalid_argument(ERR_ARRAY_INTEGRAL);
+            }
+
+            std::vector<JsonValue> array = GetVal<JsonType::Array>();
+            if (index < 0 || index >= array.size())
+            {
+                throw std::out_of_range(ERR_OUT_OF_RANGE);
+            }
+
+            return GetVal<JsonType::Array>()[std::forward<T>(index)];
+        }
+        else
+        {
+            if (cur_type_ != JsonType::Object)
+            {
+                throw std::invalid_argument(ERR_OBJECT_STRING);
+            }
+
+            std::string key(std::forward<T>(index));
+            std::unordered_map<std::string, JsonValue> object = GetVal<JsonType::Object>();
+            if (object.find(key) == object.end())
+            {
+                throw std::invalid_argument(ERR_INVALID_KEY);
+            }
+
+            return GetVal<JsonType::Object>()[std::move(key)];
         }
     }
 

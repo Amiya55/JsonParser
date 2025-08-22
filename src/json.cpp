@@ -37,17 +37,17 @@ std::ostream &PrintJson(std::ostream &os, const JsonValue &json_val, size_t inde
         os << "{\n";
         {
             size_t index = 0;
+            size_t object_size = json_val.GetVal<JsonType::Object>().size();
             for (const auto &pair : json_val.GetVal<JsonType::Object>())
             {
                 PrintIndent(os, indent_level + 1, indent_size);
                 os << '\"' << pair.first << "\": ";
                 PrintJson(os, pair.second, indent_level + 1, indent_size);
 
-                if (index != json_val.GetVal<JsonType::Object>().size() - 1)
+                if (index != object_size - 1)
                 {
                     os << ",\n";
                 }
-
                 ++index;
             }
         }
@@ -56,15 +56,19 @@ std::ostream &PrintJson(std::ostream &os, const JsonValue &json_val, size_t inde
         os << '}';
         break;
     case JsonType::Array:
-        os << "\n";
+        os << "[\n";
         {
             size_t index = 0;
+            size_t array_size = json_val.GetVal<JsonType::Array>().size();
             for (const auto &item : json_val.GetVal<JsonType::Array>())
             {
                 PrintIndent(os, indent_level + 1, indent_size);
                 PrintJson(os, item, indent_level + 1, indent_size);
-                os << ",\n";
 
+                if (index != array_size - 1)
+                {
+                    os << ",\n";
+                }
                 ++index;
             }
         }
