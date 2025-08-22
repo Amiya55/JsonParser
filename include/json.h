@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -19,25 +20,24 @@ class Json
   public:
     ~Json() = default;
 
+    Json(const Json &) = default;
+    Json(Json &&) = default;
+    Json &operator=(const Json &) = default;
+    Json &operator=(Json &&) = default;
+
     /**
      * @brief Generate an empty json object.
      *
      * @return Json - return an empty json object object.
      */
-    [[nodiscard]] static Json JsonObj() noexcept
-    {
-        return Json("{}");
-    }
+    [[nodiscard]] static Json JsonObj() noexcept;
 
     /**
      * @brief Generate an empty json array.
      *
      * @return Json - return an empty json array object.
      */
-    [[nodiscard]] static Json JsonArr() noexcept
-    {
-        return Json("[]");
-    }
+    [[nodiscard]] static Json JsonArr() noexcept;
 
     /**
      * @brief construct a json data struct by reading a json file
@@ -104,6 +104,8 @@ class Json
 
         data_ = std::move(parser.GetJsonAst());
     }
+
+    friend std::ostream &operator<<(std::ostream &os, const Json &json);
 };
 
 } // namespace simple_json

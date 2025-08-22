@@ -224,6 +224,7 @@ void ParserTest()
 void JsonTest()
 {
     simple_json::Json json = simple_json::Json::FromFile("./tmp.json");
+    std::cout << json << '\n';
 }
 
 } // namespace
