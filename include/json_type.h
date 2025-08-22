@@ -164,10 +164,54 @@ class JsonValue
     /**
      * @brief Get current C++ value in JsonValue object
      *
-     * @tparam Type The specified C++ type to be retrieved.
-     * @return auto The specified C++ value from the JsonValue object.
+     * @tparam Type - The specified C++ type to be retrieved.
+     * @return auto - The specified C++ const reference value from the JsonValue object.
      */
-    template <JsonType Type> auto GetVal() const
+    template <JsonType Type> const auto& GetVal() const
+    {
+        if (Type != cur_type_)
+        {
+            const std::string func_info("in function getval()!");
+            throw std::runtime_error(ERR_TYPE_MISMATCH + func_info);
+        }
+
+        if constexpr (Type == JsonType::Object)
+        {
+            return std::get<std::unordered_map<std::string, JsonValue>>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::Array)
+        {
+            return std::get<std::vector<JsonValue>>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::String)
+        {
+            return std::get<std::string>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::Bool)
+        {
+            return std::get<bool>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::Int)
+        {
+            return std::get<long long>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::Float)
+        {
+            return std::get<long double>(cur_val_);
+        }
+        else if constexpr (Type == JsonType::Null)
+        {
+            return std::get<std::nullptr_t>(cur_val_);
+        }
+    }
+
+    /**
+     * @brief Get current C++ value in JsonValue object
+     *
+     * @tparam Type - The specified C++ type to be retrieved.
+     * @return auto - The specified C++ reference value from the JsonValue object.
+     */
+    template <JsonType Type> auto &GetVal()
     {
         if (Type != cur_type_)
         {

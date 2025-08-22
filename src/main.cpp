@@ -225,6 +225,11 @@ void JsonTest()
 {
     simple_json::Json json = simple_json::Json::FromFile("./tmp.json");
     std::cout << json << '\n';
+
+    std::string key("c++");
+    std::cout << json[key].GetVal<simple_json::JsonType::String>() << '\n';
+    // simple_json::JsonValue val = json[key];
+    // std::cout << val.GetVal<simple_json::JsonType::String>() << '\n';
 }
 
 } // namespace

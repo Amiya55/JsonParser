@@ -10,8 +10,10 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <unordered_map>
 #include <utility>
-
+#include <iostream>
 namespace simple_json
 {
 
@@ -89,6 +91,27 @@ class Json
         return Json(std::forward<T>(json_str));
     }
 
+    template <typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_constructible_v<std::string, T>>>
+    JsonValue &operator[](T &&index)
+    {
+        if constexpr (std::is_integral_v<T>)
+        {
+            if (data_.GetType() != JsonType::Array)
+            {
+                throw std::runtime_error("json operator[] > cannot use integral to locate json object pair!");
+            }
+            return data_.GetVal<JsonType::Array>()[std::forward<T>(index)];
+        }
+        else
+        {
+            if (data_.GetType() != JsonType::Object)
+            {
+                throw std::runtime_error("json operator[] > cannot use string to locate json array item!");
+            }
+            return data_.GetVal<JsonType::Object>()[std::forward<T>(index)];
+        }
+    }
+
   private:
     JsonValue data_;
 
@@ -105,6 +128,13 @@ class Json
         data_ = std::move(parser.GetJsonAst());
     }
 
+    /**
+     * @brief easily print json data struct on console by using std::cout.
+     *
+     * @param os - ostream object.
+     * @param json - json data struct object you want to print on console.
+     * @return std::ostream& - reference to ostream object.
+     */
     friend std::ostream &operator<<(std::ostream &os, const Json &json);
 };
 
